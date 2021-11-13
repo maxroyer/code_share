@@ -1,5 +1,5 @@
-use eframe::{egui, epi};
-
+use eframe::{egui::{self, ScrollArea}, epi};
+use super::file::*;
 pub struct CodeShare {
     text_buf: String,
     is_open_window: bool,
@@ -64,11 +64,13 @@ impl epi::App for CodeShare {
                 });
             });
         });
+        //  Open file window
         if *is_open_window {
             egui::Window::new("Open File").show(ctx, |ui| {
                 ui.text_edit_singleline(file_to_open);
                 ui.horizontal( |ui| {
                     if ui.button("Open").clicked() {
+                        *text_buf = open_file(file_to_open);
                         *is_open_window = false;
                     }
                     if ui.button("Close").clicked() {
@@ -79,13 +81,15 @@ impl epi::App for CodeShare {
         }
 
         egui::CentralPanel::default().frame(egui::Frame::none().corner_radius(0.0)).show(ctx, |ui| {
-            ui.add_sized(ui.available_size(),
-                egui::TextEdit::multiline(text_buf)
-                    .text_style(egui::TextStyle::Monospace)
-                    .code_editor()
-                    .lock_focus(true)
-                    .desired_width(f32::INFINITY)
-            )
+            ScrollArea::vertical().show(ui, |ui|{
+                ui.add_sized(ui.available_size(),
+                    egui::TextEdit::multiline(text_buf)
+                        .text_style(egui::TextStyle::Monospace)
+                        .code_editor()
+                        .lock_focus(true)
+                        .desired_width(f32::INFINITY)
+                )
+            });
         });
 
     }
