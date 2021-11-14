@@ -1,5 +1,8 @@
 use eframe::{egui::{self, ScrollArea}, epi};
-use super::file::*;
+use crate::file::*;
+
+
+
 pub struct CodeShare {
     file_status: FileStatus,
     text_buf: String,
@@ -8,7 +11,8 @@ pub struct CodeShare {
     is_save_window: bool,
     is_save_as_window:bool,
     is_unsaved_window: bool,
-    file_to_open: String,
+    is_error: bool,
+    err_msg: Option<String>,
 }
 
 impl Default for CodeShare {
@@ -21,7 +25,8 @@ impl Default for CodeShare {
             is_save_window: false,
             is_save_as_window: false,
             is_unsaved_window: false,
-            file_to_open: String::from(std::env::var("HOME").unwrap()),
+            is_error: false,
+            err_msg: None,
         }
     }
 }
@@ -60,11 +65,14 @@ impl epi::App for CodeShare {
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
         let Self {
             file_status,
-            text_buf, is_buffer_saved,
-            is_open_window, is_save_window,
+            text_buf,
+            is_buffer_saved,
+            is_open_window,
+            is_save_window,
             is_save_as_window,
             is_unsaved_window,
-            file_to_open,
+            is_error,
+            err_msg,
         } = self;
 
 
@@ -101,23 +109,17 @@ impl epi::App for CodeShare {
         });
         //  Open file window
         if *is_open_window {
-            egui::Window::new("Open File").show(ctx, |ui| {
-                ui.text_edit_singleline(file_to_open);
-                ui.horizontal( |ui| {
-                    if ui.button("Open").clicked() {
-                        file_status.set_path(file_to_open);
-                        *text_buf = match file_status.get_contents() {
-                            Ok(c) => c,
-                            Err(e) => panic!("Error: {}",e)
-                        };
-                        *is_buffer_saved = true;
-                        *is_open_window = false;
-                    }
-                    if ui.button("Close").clicked() {
-                        *is_open_window = false;
-                    }   
-                });
-            });
+            match file_status.open_file() {
+                Ok(contents) => {
+                    *text_buf = contents;
+                    *is_open_window = false;
+                },
+                Err(e) => {
+                    *err_msg = Some(e.to_string());
+                    *is_error = true;
+                    *is_open_window = false;
+                }
+            };
         }
         // File save status window
         if *is_save_window {
@@ -143,19 +145,14 @@ impl epi::App for CodeShare {
         }
         //   Save as window
         if *is_save_as_window {
-            egui::Window::new("Save As").show(ctx, |ui| {
-                ui.text_edit_singleline(file_to_open);
-                ui.horizontal( |ui| {
-                    if ui.button("Save").clicked() {
-                        file_status.set_path(file_to_open);
-                        *is_save_window = true;
-                        
-                    }
-                    if ui.button("Close").clicked() {
-                        *is_save_as_window = false;
-                    }   
-                });
-            });
+            match file_status.save_file_as(text_buf) {
+                Ok(_) => *is_buffer_saved = true,
+                Err(e) => {
+                    *err_msg = Some(e.to_string());
+                    *is_error = true;
+                }
+            };
+            *is_save_as_window = false;
         }
         //  File not saved popup
         if *is_unsaved_window {
@@ -175,6 +172,20 @@ impl epi::App for CodeShare {
                         text_buf.clear();
                     }   
                 });
+            });
+        }
+
+        if *is_error {
+            egui::Window::new("Error").show(ctx, |ui| {
+                let error = match err_msg {
+                    Some(msg) => msg.clone(),
+                    None => String::from("Unknown Error")
+                };
+                ui.label(error);
+                if ui.button("Close").clicked() {
+                    *is_error = false;
+                    *err_msg = None;
+                }
             });
         }
 

@@ -1,9 +1,12 @@
 use std::fs::File;
+use std::path::PathBuf;
 use std::io::prelude::*;
+use std::str::FromStr;
+use rfd;
 
 
 pub struct FileStatus {
-    path: Option<String>,
+    path: Option<PathBuf>,
     is_new: bool
 }
 
@@ -14,8 +17,12 @@ impl Default for FileStatus {
 }
 
 impl FileStatus {
-    pub fn set_path(&mut self, path: &mut String) {
-        self.path = Some(path.clone());
+    pub fn _set_path(&mut self, path: &mut String) {
+        let path_buf = match PathBuf::from_str(path) {
+            Ok(buf) => buf,
+            Err(e) => panic!("Error: {}" ,e)
+        };
+        self.path = Some(path_buf);
     }
 
     fn _set_is_new(&mut self, status: bool) {
@@ -58,5 +65,43 @@ impl FileStatus {
             },
             Err(e) => Err(e.into())
         }
+    }
+
+    pub fn save_file_as(&mut self, contents: &mut String) -> Result<(), Box<dyn std::error::Error>> {
+        let saved_path = Self::open_file_save_dialog();
+        match std::fs::write(&saved_path, contents) {
+            Ok(_) => {
+                self.is_new = false;
+                self.path = Some(saved_path);
+                return Ok(())
+            },
+            Err(e) => {
+                let e_msg = format!("File not saved: {}", e);
+                return Err(e_msg.into())
+            }
+        }
+    }
+
+    pub fn open_file(&mut self) -> Result<String, Box<dyn std::error::Error>> {
+        let open_path = Self::open_file_sel_dialog();
+        self.path = Some(open_path);
+        match self.get_contents() {
+            Ok(contents) => Ok(contents),
+            Err(e) => Err(e)
+        }
+    }
+
+    fn open_file_sel_dialog() -> PathBuf {
+        let file = rfd::FileDialog::new()
+            .set_directory(std::env::var("HOME").unwrap())
+            .pick_file();
+        file.unwrap()
+    }
+    
+    fn open_file_save_dialog() -> PathBuf {
+        let file = rfd::FileDialog::new()
+            .set_directory(std::env::var("HOME").unwrap())
+            .save_file();
+        file.unwrap()
     }
 }

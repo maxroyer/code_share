@@ -14,6 +14,8 @@ eframe = "0.15.0" # Gives us egui, epi and web+native backends
 
 serde = { version = "1", features = ["derive"], optional = true }
 
+rfd = "0.5.1"
+
 [features]
 default = []
 #persistence = ["eframe/persistence", "serde"] # Enable if you want to persist app state on shutdown
