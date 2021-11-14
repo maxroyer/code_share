@@ -33,6 +33,13 @@ impl FileStatus {
         self.is_new
     }
 
+    pub fn get_path_string(&self) -> String {
+        match self.path.clone() {
+            Some(path) => String::from(path.to_str().unwrap()),
+            None => String::from("-NOT SAVED-")
+        }
+    }
+
     pub fn get_contents(&mut self) -> Result<String, Box<dyn std::error::Error>> {
         let file_path = match &self.path {
             Some(path) => path,
@@ -67,13 +74,16 @@ impl FileStatus {
         }
     }
 
-    pub fn save_file_as(&mut self, contents: &mut String) -> Result<(), Box<dyn std::error::Error>> {
-        let saved_path = Self::open_file_save_dialog();
+    pub fn save_file_as(&mut self, contents: &mut String) -> Result<Option<()>, Box<dyn std::error::Error>> {
+        let saved_path = match Self::open_file_save_dialog() {
+            Some(path) => path,
+            None => return Ok(None)
+        };
         match std::fs::write(&saved_path, contents) {
             Ok(_) => {
                 self.is_new = false;
                 self.path = Some(saved_path);
-                return Ok(())
+                return Ok(Some(()))
             },
             Err(e) => {
                 let e_msg = format!("File not saved: {}", e);
@@ -82,26 +92,27 @@ impl FileStatus {
         }
     }
 
-    pub fn open_file(&mut self) -> Result<String, Box<dyn std::error::Error>> {
-        let open_path = Self::open_file_sel_dialog();
+    pub fn open_file(&mut self) -> Result<Option<String>, Box<dyn std::error::Error>> {
+        let open_path = match Self::open_file_sel_dialog() {
+            Some(p) => p,
+            None => return Ok(None)
+        };
         self.path = Some(open_path);
         match self.get_contents() {
-            Ok(contents) => Ok(contents),
+            Ok(contents) => Ok(Some(contents)),
             Err(e) => Err(e)
         }
     }
 
-    fn open_file_sel_dialog() -> PathBuf {
-        let file = rfd::FileDialog::new()
+    fn open_file_sel_dialog() -> Option<PathBuf> {
+        rfd::FileDialog::new()
             .set_directory(std::env::var("HOME").unwrap())
-            .pick_file();
-        file.unwrap()
+            .pick_file()        
     }
     
-    fn open_file_save_dialog() -> PathBuf {
-        let file = rfd::FileDialog::new()
+    fn open_file_save_dialog() -> Option<PathBuf> {
+        rfd::FileDialog::new()
             .set_directory(std::env::var("HOME").unwrap())
-            .save_file();
-        file.unwrap()
+            .save_file()
     }
 }

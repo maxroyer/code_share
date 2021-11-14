@@ -1,16 +1,21 @@
 use eframe::{egui::{self, ScrollArea}, epi};
 use crate::file::*;
 
-
+#[derive(PartialEq)]
+enum Popup {
+    OpenFile,
+    SaveFile,
+    SaveAs,
+    Error,
+    None,
+}
 
 pub struct CodeShare {
     file_status: FileStatus,
     text_buf: String,
     is_buffer_saved: bool,
-    is_open_window: bool,
-    is_save_window: bool,
-    is_save_as_window:bool,
-    is_unsaved_window: bool,
+    active_popup: Popup,
+    is_unsaved: bool,
     is_error: bool,
     err_msg: Option<String>,
 }
@@ -21,10 +26,8 @@ impl Default for CodeShare {
             file_status: FileStatus::default(),
             text_buf: String::new(),
             is_buffer_saved: false,
-            is_open_window: false,
-            is_save_window: false,
-            is_save_as_window: false,
-            is_unsaved_window: false,
+            active_popup: Popup::None,
+            is_unsaved: false,
             is_error: false,
             err_msg: None,
         }
@@ -33,7 +36,7 @@ impl Default for CodeShare {
 
 impl epi::App for CodeShare {
     fn name(&self) -> &str {
-        "eframe template"
+        "code_share"
     }
 
     /// Called once before the first frame.
@@ -67,10 +70,8 @@ impl epi::App for CodeShare {
             file_status,
             text_buf,
             is_buffer_saved,
-            is_open_window,
-            is_save_window,
-            is_save_as_window,
-            is_unsaved_window,
+            active_popup,
+            is_unsaved,
             is_error,
             err_msg,
         } = self;
@@ -83,23 +84,21 @@ impl epi::App for CodeShare {
                         match *is_buffer_saved {
                             true => text_buf.clear(),
                             false => {
-                                *is_unsaved_window = true;
+                                *is_unsaved = true;
                             }
                         }
                     }
                     if ui.button("Open").clicked(){
-                        *is_open_window = true;
+                        *active_popup = Popup::OpenFile;
                     }
                     if ui.button("Save").clicked() {
                         match file_status.is_new() {
-                            true => {
-                                *is_save_as_window = true;
-                            }
-                            false => *is_save_window = true
+                            true => *active_popup = Popup::SaveAs,
+                            false => *active_popup = Popup::SaveFile
                         };
                     }
                     if ui.button("Save As").clicked() {
-                        *is_save_as_window = true;
+                        *active_popup = Popup::SaveAs
                     }
                     if ui.button("Quit").clicked() {
                         frame.quit();
@@ -108,67 +107,68 @@ impl epi::App for CodeShare {
             });
         });
         //  Open file window
-        if *is_open_window {
+        if *active_popup == Popup::OpenFile {
             match file_status.open_file() {
-                Ok(contents) => {
+                Ok(Some(contents)) => {
                     *text_buf = contents;
-                    *is_open_window = false;
+                    *active_popup = Popup::None;
                 },
+                Ok(None) => *active_popup = Popup::None,
                 Err(e) => {
                     *err_msg = Some(e.to_string());
                     *is_error = true;
-                    *is_open_window = false;
+                    *active_popup = Popup::Error;
                 }
             };
         }
         // File save status window
-        if *is_save_window {
+        if *active_popup == Popup::SaveFile {
             egui::Window::new("Save Status").show(ctx, |ui| {
                 match file_status.save_file(text_buf) {
                     Ok(_) => {
                         ui.label("Save Successful");
                         if ui.button("OK").clicked() {
                             *is_buffer_saved = true;
-                            *is_save_window = false;
-                            *is_save_as_window = false;
+                            *active_popup = Popup::None;
                         }
                     },
                     Err(e) => {
                         let error = format!("Save failed: {}", e);
                         ui.label(error);
                         if ui.button("OK").clicked() {
-                            *is_save_window = false;
+                            *active_popup = Popup::None;
                         }
                     }
                 };
             });
         }
         //   Save as window
-        if *is_save_as_window {
+        if *active_popup == Popup::SaveAs {
             match file_status.save_file_as(text_buf) {
-                Ok(_) => *is_buffer_saved = true,
+                Ok(Some(_)) => *is_buffer_saved = true,
+                Ok(None) => *active_popup = Popup::None,
                 Err(e) => {
                     *err_msg = Some(e.to_string());
                     *is_error = true;
                 }
             };
-            *is_save_as_window = false;
+            *active_popup = Popup::None;
         }
-        //  File not saved popup
-        if *is_unsaved_window {
+        //  File not saved logic
+        if *is_unsaved {
             egui::Window::new("File Not Saved").show(ctx, |ui| {
                 ui.label("Current file has not been saved");
                 ui.horizontal( |ui| {
                     if ui.button("Save").clicked() {
-                        *is_save_window = true;
-                        *is_unsaved_window = false;
+                        *active_popup = Popup::SaveFile;
+                        *is_unsaved = false;
                     }
                     if ui.button("Save As").clicked() {
-                        *is_save_as_window = true;
-                        *is_unsaved_window = false;
+                        *active_popup = Popup::SaveAs;
+                        *is_unsaved = false;
                     }
                     if ui.button("Continue without saving").clicked() {
-                        *is_unsaved_window = false;
+                        *is_unsaved = false;
                         text_buf.clear();
                     }   
                 });
@@ -190,6 +190,11 @@ impl epi::App for CodeShare {
         }
 
         egui::CentralPanel::default().frame(egui::Frame::none().corner_radius(0.0)).show(ctx, |ui| {
+            ui.add(egui::widgets::Label::new(file_status.get_path_string())
+                .monospace()
+                .text_color(egui::Color32::DARK_BLUE)
+            );
+            ui.separator();
             ScrollArea::vertical().show(ui, |ui|{
                 let editor = ui.add_sized(ui.available_size(),
                 egui::TextEdit::multiline(text_buf)
