@@ -1,20 +1,9 @@
 use eframe::{egui::{self, ScrollArea}, epi};
 use crate::file::*;
 
-#[derive(PartialEq)]
-enum Popup {
-    OpenFile,
-    SaveFile,
-    SaveAs,
-    FileNotSaved,
-    Error,
-    None,
-}
-
 pub struct CodeShare {
     file_status: FileStatus,
     text_buf: String,
-    //is_buffer_saved: bool,
     active_popup: Popup,
     is_error: bool,
     err_msg: Option<String>,
@@ -25,7 +14,6 @@ impl Default for CodeShare {
         Self {
             file_status: FileStatus::default(),
             text_buf: String::new(),
-            //is_buffer_saved: false,
             active_popup: Popup::None,
             is_error: false,
             err_msg: None,
@@ -68,7 +56,6 @@ impl epi::App for CodeShare {
         let Self {
             file_status,
             text_buf,
-            //is_buffer_saved,
             active_popup,
             is_error,
             err_msg,
@@ -188,9 +175,11 @@ impl epi::App for CodeShare {
 
         egui::CentralPanel::default().frame(egui::Frame::none().corner_radius(1.0)).show(ctx, |ui| {
             ui.vertical(|ui| {
-                ui.add(egui::widgets::Label::new(file_status.get_path_string())
+                let indicator = match file_status.is_unsaved() {true => "*", false => ""};
+                let title_line = format!("{}{}", file_status.get_path_string(), indicator);
+                ui.add(egui::widgets::Label::new(title_line)
                     .monospace()
-                    .italics()
+                    .strong()
                     .text_color(egui::Color32::BLACK)
                     .background_color(egui::Color32::LIGHT_GRAY)
                 );
@@ -210,4 +199,14 @@ impl epi::App for CodeShare {
         });
 
     }
+}
+
+#[derive(PartialEq)]
+enum Popup {
+    OpenFile,
+    SaveFile,
+    SaveAs,
+    FileNotSaved,
+    Error,
+    None,
 }

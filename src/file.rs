@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use std::io::prelude::*;
 use rfd;
 
-
 pub struct FileStatus {
     path: Option<PathBuf>,
     is_unsaved: bool,
@@ -33,7 +32,7 @@ impl FileStatus {
     pub fn get_path_string(&self) -> String {
         match self.path.clone() {
             Some(path) => String::from(path.to_str().unwrap()),
-            None => String::from("-NOT SAVED-")
+            None => String::from("UNTITLED")
         }
     }
 
