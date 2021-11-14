@@ -1,17 +1,23 @@
 use eframe::{egui::{self, ScrollArea}, epi};
 use super::file::*;
 pub struct CodeShare {
+    file_status: FileStatus,
     text_buf: String,
     is_open_window: bool,
+    is_save_window: bool,
+    is_save_as_window:bool,
     file_to_open: String,
 }
 
 impl Default for CodeShare {
     fn default() -> Self {
         Self {
+            file_status: FileStatus::default(),
             text_buf: "Hello World!".to_owned(),
             is_open_window: false,
-            file_to_open: String::new(),
+            is_save_window: false,
+            is_save_as_window: false,
+            file_to_open: String::from(std::env::var("HOME").unwrap()),
         }
     }
 }
@@ -46,7 +52,7 @@ impl epi::App for CodeShare {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
-        let Self { text_buf, is_open_window,  file_to_open, } = self;
+        let Self { file_status, text_buf, is_open_window, is_save_window, is_save_as_window, file_to_open, } = self;
 
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -56,7 +62,15 @@ impl epi::App for CodeShare {
                         *is_open_window = true;
                     }
                     if ui.button("Save").clicked() {
-                        unimplemented!()
+                        match file_status.is_new() {
+                            true => {
+                                *is_save_as_window = true;
+                            }
+                            false => *is_save_window = true
+                        };
+                    }
+                    if ui.button("Save As").clicked() {
+                        *is_save_as_window = true;
                     }
                     if ui.button("Quit").clicked() {
                         frame.quit();
@@ -70,11 +84,53 @@ impl epi::App for CodeShare {
                 ui.text_edit_singleline(file_to_open);
                 ui.horizontal( |ui| {
                     if ui.button("Open").clicked() {
-                        *text_buf = open_file(file_to_open);
+                        file_status.set_path(file_to_open);
+                        *text_buf = match file_status.get_contents() {
+                            Ok(c) => c,
+                            Err(e) => panic!("Error: {}",e)
+                        };
                         *is_open_window = false;
                     }
                     if ui.button("Close").clicked() {
                         *is_open_window = false;
+                    }   
+                });
+            });
+        }
+
+        if *is_save_window {
+            egui::Window::new("Save Status").show(ctx, |ui| {
+                match file_status.save_file(text_buf) {
+                    Ok(_) => {
+                        ui.label("Save Successful");
+                        if ui.button("OK").clicked() {
+                            *is_save_window = false;
+                            *is_save_as_window = false;
+                        }
+                    },
+                    Err(e) => {
+                        let error = format!("Save failed: {}", e);
+                        ui.label(error);
+                        if ui.button("OK").clicked() {
+                            *is_save_window = false;
+                            *is_save_as_window = true;
+                        }
+                    }
+                };
+            });
+        }
+
+        if *is_save_as_window {
+            egui::Window::new("Save As").show(ctx, |ui| {
+                ui.text_edit_singleline(file_to_open);
+                ui.horizontal( |ui| {
+                    if ui.button("Save").clicked() {
+                        file_status.set_path(file_to_open);
+                        *is_save_window = true;
+                        
+                    }
+                    if ui.button("Quit").clicked() {
+                        *is_save_as_window = false;
                     }   
                 });
             });
