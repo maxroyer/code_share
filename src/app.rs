@@ -6,6 +6,7 @@ enum Popup {
     OpenFile,
     SaveFile,
     SaveAs,
+    FileNotSaved,
     Error,
     None,
 }
@@ -13,9 +14,8 @@ enum Popup {
 pub struct CodeShare {
     file_status: FileStatus,
     text_buf: String,
-    is_buffer_saved: bool,
+    //is_buffer_saved: bool,
     active_popup: Popup,
-    is_unsaved: bool,
     is_error: bool,
     err_msg: Option<String>,
 }
@@ -25,9 +25,8 @@ impl Default for CodeShare {
         Self {
             file_status: FileStatus::default(),
             text_buf: String::new(),
-            is_buffer_saved: false,
+            //is_buffer_saved: false,
             active_popup: Popup::None,
-            is_unsaved: false,
             is_error: false,
             err_msg: None,
         }
@@ -69,9 +68,8 @@ impl epi::App for CodeShare {
         let Self {
             file_status,
             text_buf,
-            is_buffer_saved,
+            //is_buffer_saved,
             active_popup,
-            is_unsaved,
             is_error,
             err_msg,
         } = self;
@@ -81,10 +79,13 @@ impl epi::App for CodeShare {
             egui::menu::bar(ui, |ui| {
                 egui::menu::menu(ui, "File", |ui| {
                     if ui.button("New").clicked() {
-                        match *is_buffer_saved {
-                            true => text_buf.clear(),
+                        match file_status.is_unsaved() {
                             false => {
-                                *is_unsaved = true;
+                                text_buf.clear();
+                                file_status.reset();
+                            },
+                            true => {
+                                *active_popup = Popup::FileNotSaved;
                             }
                         }
                     }
@@ -127,10 +128,7 @@ impl epi::App for CodeShare {
                 match file_status.save_file(text_buf) {
                     Ok(_) => {
                         ui.label("Save Successful");
-                        if ui.button("OK").clicked() {
-                            *is_buffer_saved = true;
-                            *active_popup = Popup::None;
-                        }
+                        if ui.button("OK").clicked() { *active_popup = Popup::None; }
                     },
                     Err(e) => {
                         let error = format!("Save failed: {}", e);
@@ -145,31 +143,30 @@ impl epi::App for CodeShare {
         //   Save as window
         if *active_popup == Popup::SaveAs {
             match file_status.save_file_as(text_buf) {
-                Ok(Some(_)) => *is_buffer_saved = true,
+                Ok(Some(_)) => *active_popup = Popup::None,
                 Ok(None) => *active_popup = Popup::None,
                 Err(e) => {
                     *err_msg = Some(e.to_string());
                     *is_error = true;
                 }
             };
-            *active_popup = Popup::None;
+            
         }
         //  File not saved logic
-        if *is_unsaved {
+        if *active_popup == Popup::FileNotSaved {
             egui::Window::new("File Not Saved").show(ctx, |ui| {
                 ui.label("Current file has not been saved");
                 ui.horizontal( |ui| {
                     if ui.button("Save").clicked() {
                         *active_popup = Popup::SaveFile;
-                        *is_unsaved = false;
                     }
                     if ui.button("Save As").clicked() {
                         *active_popup = Popup::SaveAs;
-                        *is_unsaved = false;
                     }
                     if ui.button("Continue without saving").clicked() {
-                        *is_unsaved = false;
                         text_buf.clear();
+                        file_status.reset();
+                        *active_popup = Popup::None;
                     }   
                 });
             });
@@ -189,32 +186,27 @@ impl epi::App for CodeShare {
             });
         }
 
-        egui::CentralPanel::default().frame(egui::Frame::none().corner_radius(0.0)).show(ctx, |ui| {
-            ui.add(egui::widgets::Label::new(file_status.get_path_string())
-                .monospace()
-                .text_color(egui::Color32::DARK_BLUE)
-            );
-            ui.separator();
-            ScrollArea::vertical().show(ui, |ui|{
-                let editor = ui.add_sized(ui.available_size(),
-                egui::TextEdit::multiline(text_buf)
-                    .text_style(egui::TextStyle::Monospace)
-                    .code_editor()
-                    .lock_focus(true)
-                    .desired_width(f32::INFINITY)
+        egui::CentralPanel::default().frame(egui::Frame::none().corner_radius(1.0)).show(ctx, |ui| {
+            ui.vertical(|ui| {
+                ui.add(egui::widgets::Label::new(file_status.get_path_string())
+                    .monospace()
+                    .italics()
+                    .text_color(egui::Color32::BLACK)
+                    .background_color(egui::Color32::LIGHT_GRAY)
                 );
-                if editor.changed() {
-                    *is_buffer_saved = false;
-                }
-
-                // ui.add_sized(ui.available_size(),
-                //     egui::TextEdit::multiline(text_buf)
-                //         .text_style(egui::TextStyle::Monospace)
-                //         .code_editor()
-                //         .lock_focus(true)
-                //         .desired_width(f32::INFINITY)
-                // )
-            });
+                ScrollArea::vertical().show(ui, |ui|{
+                    let editor = ui.add_sized(ui.available_size(),
+                    egui::TextEdit::multiline(text_buf)
+                        .text_style(egui::TextStyle::Monospace)
+                        .code_editor()
+                        .lock_focus(true)
+                        .desired_width(f32::INFINITY)
+                    );
+                    if editor.changed() {
+                        file_status.set_unsaved(true);
+                    }
+                });                
+            });    
         });
 
     }
