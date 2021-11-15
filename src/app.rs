@@ -3,6 +3,8 @@ use eframe::egui;
 use crate::file::*;
 use crate::app_config::AppConfig;
 
+#[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "persistence", serde(default))]
 pub struct CodeShare {
     config: AppConfig,
     
@@ -11,7 +13,7 @@ pub struct CodeShare {
     text_buf: String,
     active_popup: Popup,
     err_msg: Option<String>,
-    status_msg: Option<&'static str>,
+    status_msg: Option<String>,
 }
 
 impl CodeShare {
@@ -33,7 +35,7 @@ impl Default for CodeShare {
             text_buf: String::new(),
             active_popup: Popup::None,
             err_msg: None,
-            status_msg: Some("code_share loaded"),
+            status_msg: Some("code_share loaded".to_string()),
         }
     }
 }
@@ -47,21 +49,14 @@ impl epi::App for CodeShare {
     /// Called once before the first frame.
     fn setup(
         &mut self,
-        ctx: &egui::CtxRef,
+        _ctx: &egui::CtxRef,
         _frame: &mut epi::Frame<'_>,
-        _storage: Option<&dyn epi::Storage>,
-    ) {
-        // let mut fonts = egui::FontDefinitions::default();
-        // fonts.family_and_size.insert(
-        //     egui::TextStyle::Monospace,
-        //     (egui::FontFamily::Monospace, 15.0)
-        // );
-        // ctx.set_fonts(fonts);
-        
+        storage: Option<&dyn epi::Storage>,
+    ) {        
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
         #[cfg(feature = "persistence")]
-        if let Some(storage) = _storage {
+        if let Some(storage) = storage {
             *self = epi::get_value(storage, epi::APP_KEY).unwrap_or_default()
         }
         
@@ -141,13 +136,13 @@ impl epi::App for CodeShare {
                     match file_status.save_file(text_buf) {
                         Ok(_) => {
                             *active_popup = Popup::None;
-                            *status_msg = Some("Save Successful");
+                            *status_msg = Some("Save Successful".to_string());
                         },
                         Err(e) => {
                             let error = format!("Save failed: {}", e);
                             *err_msg = Some(error);
                             *active_popup = Popup::Error;
-                            *status_msg = Some("Save Failed")
+                            *status_msg = Some("Save Failed".to_string())
                         }
                     };
                 }
@@ -159,7 +154,7 @@ impl epi::App for CodeShare {
                 Ok(Some(contents)) => {
                     *text_buf = contents;
                     *active_popup = Popup::None;
-                    *status_msg = Some("Open Successful");
+                    *status_msg = Some("Open Successful".to_string());
                 },
                 Ok(None) => *active_popup = Popup::None,
                 Err(e) => {
@@ -218,8 +213,14 @@ impl epi::App for CodeShare {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.horizontal_top(|ui| {
                     let mut lines_str = get_line_num_str(text_buf.lines().count());
-                    ui.add_sized([40.0, ui.available_height()], egui::TextEdit::multiline(&mut lines_str)
-                        .desired_width(40.0)
+                    // ui.add_sized([40.0, ui.available_height()], egui::TextEdit::multiline(&mut lines_str)
+                    //     .desired_width(50.0)
+                    //     .code_editor()
+                    //     .frame(false)
+                    //     .interactive(false)
+                    // );
+                    ui.add(egui::TextEdit::multiline(&mut lines_str)
+                        .desired_width(config.get_font_size() * 2.7)
                         .code_editor()
                         .frame(false)
                         .interactive(false)
@@ -298,6 +299,7 @@ fn get_line_num_str(count: usize) -> String {
 }
 
 #[derive(PartialEq)]
+#[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
 enum Popup {
     OpenFile,
     SaveFile,

@@ -17,7 +17,7 @@ serde = { version = "1", features = ["derive"], optional = true }
 rfd = "0.5.1"
 
 [features]
-default = []
+default = ["persistence"]
 persistence = ["eframe/persistence", "serde"] # Enable if you want to persist app state on shutdown
 
 [profile.release]

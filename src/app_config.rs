@@ -1,4 +1,4 @@
-
+#[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
 pub struct AppConfig {
     font_size: u32
 }
