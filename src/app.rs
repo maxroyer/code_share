@@ -1,4 +1,5 @@
-use eframe::{egui::{self, ScrollArea}, epi};
+use eframe::epi;
+use eframe::egui;
 use crate::file::*;
 
 pub struct CodeShare {
@@ -93,8 +94,17 @@ impl epi::App for CodeShare {
                     }
                 });
             });
+            let indicator = match file_status.is_unsaved() {true => "*", false => ""};
+                let title_line = format!("{}{}", file_status.get_path_string(), indicator);
+                ui.add(egui::widgets::Label::new(title_line)
+                    .monospace()
+                    .strong()
+                    .text_color(egui::Color32::BLACK)
+                    .background_color(egui::Color32::LIGHT_GRAY)
+                );
         });
-        //  Open file window
+
+        //  Open file popup
         if *active_popup == Popup::OpenFile {
             match file_status.open_file() {
                 Ok(Some(contents)) => {
@@ -109,7 +119,7 @@ impl epi::App for CodeShare {
                 }
             };
         }
-        // File save status window
+        // File save popup
         if *active_popup == Popup::SaveFile {
             egui::Window::new("Save Status").show(ctx, |ui| {
                 match file_status.save_file(text_buf) {
@@ -127,7 +137,7 @@ impl epi::App for CodeShare {
                 };
             });
         }
-        //   Save as window
+        //   Save as popup
         if *active_popup == Popup::SaveAs {
             match file_status.save_file_as(text_buf) {
                 Ok(Some(_)) => *active_popup = Popup::None,
@@ -139,7 +149,7 @@ impl epi::App for CodeShare {
             };
             
         }
-        //  File not saved logic
+        //  File not saved popup
         if *active_popup == Popup::FileNotSaved {
             egui::Window::new("File Not Saved").show(ctx, |ui| {
                 ui.label("Current file has not been saved");
@@ -158,7 +168,7 @@ impl epi::App for CodeShare {
                 });
             });
         }
-
+        //  Error Popup
         if *is_error {
             egui::Window::new("Error").show(ctx, |ui| {
                 let error = match err_msg {
@@ -173,32 +183,59 @@ impl epi::App for CodeShare {
             });
         }
 
-        egui::CentralPanel::default().frame(egui::Frame::none().corner_radius(1.0)).show(ctx, |ui| {
-            ui.vertical(|ui| {
-                let indicator = match file_status.is_unsaved() {true => "*", false => ""};
-                let title_line = format!("{}{}", file_status.get_path_string(), indicator);
-                ui.add(egui::widgets::Label::new(title_line)
-                    .monospace()
-                    .strong()
-                    .text_color(egui::Color32::BLACK)
-                    .background_color(egui::Color32::LIGHT_GRAY)
-                );
-                ScrollArea::vertical().show(ui, |ui|{
-                    let editor = ui.add_sized(ui.available_size(),
-                    egui::TextEdit::multiline(text_buf)
-                        .text_style(egui::TextStyle::Monospace)
+        egui::CentralPanel::default().frame(egui::Frame::none().corner_radius(0.0)).show(ctx, |ui| {
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                ui.horizontal_top(|ui| {
+                    let mut lines_str = get_line_num_str(text_buf.lines().count());
+                    ui.add_sized([40.0, ui.available_height()], egui::TextEdit::multiline(&mut lines_str)
+                        .desired_width(40.0)
                         .code_editor()
-                        .lock_focus(true)
-                        .desired_width(f32::INFINITY)
+                        .interactive(false)
+                    );
+                    let editor = ui.add_sized(ui.available_size(),
+                        egui::TextEdit::multiline(text_buf)
+                            .text_style(egui::TextStyle::Monospace)
+                            .code_editor()
+                            .lock_focus(true)
+                            .desired_width(f32::INFINITY)
                     );
                     if editor.changed() {
                         file_status.set_unsaved(true);
                     }
-                });                
-            });    
+                });
+            });  
         });
-
     }
+}
+
+fn get_line_num_str(count: usize) -> String {
+    let mut lines_str = String::new();
+    for num in 1..=count {
+        match num {
+            num if num < 10 => {
+                lines_str.push_str("   ");
+                lines_str.push_str(&num.to_string());
+                lines_str.push('\n');
+            },
+            num if num < 100 => {
+                lines_str.push_str("  ");
+                lines_str.push_str(&num.to_string());
+                lines_str.push('\n');
+            },
+            num if num < 1000 => {
+                lines_str.push_str(" ");
+                lines_str.push_str(&num.to_string());
+                lines_str.push('\n');
+            },
+            num if num >= 1000 => {
+                lines_str.push_str(&num.to_string());
+                lines_str.push('\n');
+            }
+            _ => (),
+        }
+    }
+    lines_str.push_str("   ~");
+    lines_str
 }
 
 #[derive(PartialEq)]
