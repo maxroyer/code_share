@@ -49,17 +49,21 @@ impl epi::App for CodeShare {
     /// Called once before the first frame.
     fn setup(
         &mut self,
-        _ctx: &egui::CtxRef,
+        ctx: &egui::CtxRef,
         _frame: &mut epi::Frame<'_>,
-        storage: Option<&dyn epi::Storage>,
+        _storage: Option<&dyn epi::Storage>,
     ) {        
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
         #[cfg(feature = "persistence")]
-        if let Some(storage) = storage {
+        if let Some(storage) = _storage {
             *self = epi::get_value(storage, epi::APP_KEY).unwrap_or_default()
         }
-        
+        CodeShare::change_app_font_size(ctx, self.config.get_font_size());
+        self.text_buf.clear();
+        self.status_msg = Some("code_share loaded".to_string());
+        self.err_msg = None;
+        self.active_popup = Popup::None;
     }
 
     /// Called by the frame work to save state before shutdown.
@@ -69,6 +73,14 @@ impl epi::App for CodeShare {
         epi::set_value(storage, epi::APP_KEY, self);
     }
 
+    fn on_exit(&mut self) {
+        match self.file_status.is_unsaved() {
+            false => (),
+            true => {
+                
+            }
+        }
+    }
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
@@ -89,14 +101,23 @@ impl epi::App for CodeShare {
                             false => {
                                 text_buf.clear();
                                 file_status.reset();
+                                *status_msg = Some("New File Opened".to_string());
                             },
                             true => {
-                                *active_popup = Popup::FileNotSaved;
+                                *active_popup = Popup::FileNotSavedNew;
                             }
                         }
                     }
                     if ui.button("Open").clicked(){
-                        *active_popup = Popup::OpenFile;
+                        match file_status.is_unsaved() {
+                            false => {
+                                *active_popup = Popup::OpenFile;
+                            },
+                            true => {
+                                *active_popup = Popup::FileNotSavedOpen;
+                            }
+                        }
+                        
                     }
                     if ui.button("Save").clicked() {
                         *active_popup = Popup::SaveFile;
@@ -156,7 +177,10 @@ impl epi::App for CodeShare {
                     *active_popup = Popup::None;
                     *status_msg = Some("Open Successful".to_string());
                 },
-                Ok(None) => *active_popup = Popup::None,
+                Ok(None) => {
+                    *active_popup = Popup::None;
+                    *status_msg = Some("Open Cancelled".to_string());
+                },
                 Err(e) => {
                     *err_msg = Some(e.to_string());
                     *active_popup = Popup::Error;
@@ -166,8 +190,14 @@ impl epi::App for CodeShare {
         //   Save as popup
         if *active_popup == Popup::SaveAs {
             match file_status.save_file_as(text_buf) {
-                Ok(Some(_)) => *active_popup = Popup::None,
-                Ok(None) => *active_popup = Popup::None,
+                Ok(Some(_)) => {
+                    *active_popup = Popup::None;
+                    *status_msg = Some("Save Successful".to_string());
+                },
+                Ok(None) => {
+                    *active_popup = Popup::None;
+                    *status_msg = Some("Save Cancelled".to_string());
+                },
                 Err(e) => {
                     *err_msg = Some(e.to_string());
                     *active_popup = Popup::Error;
@@ -175,8 +205,8 @@ impl epi::App for CodeShare {
             };
             
         }
-        //  File not saved popup
-        if *active_popup == Popup::FileNotSaved {
+        //  File not saved popup (creating new file)
+        if *active_popup == Popup::FileNotSavedNew {
             egui::Window::new("File Not Saved").collapsible(false).show(ctx, |ui| {
                 ui.label("Current file has not been saved");
                 ui.horizontal( |ui| {
@@ -190,6 +220,25 @@ impl epi::App for CodeShare {
                         text_buf.clear();
                         file_status.reset();
                         *active_popup = Popup::None;
+                        *status_msg = Some("Cont. w/o saving".to_string());
+                    }   
+                });
+            });
+        }
+        //  File not saved popup (opening different file)
+        if *active_popup == Popup::FileNotSavedOpen {
+            egui::Window::new("File Not Saved").collapsible(false).show(ctx, |ui| {
+                ui.label("Current file has not been saved");
+                ui.horizontal( |ui| {
+                    if ui.button("Save").clicked() {
+                        *active_popup = Popup::SaveFile;
+                    }
+                    if ui.button("Save As").clicked() {
+                        *active_popup = Popup::SaveAs;
+                    }
+                    if ui.button("Continue without saving").clicked() {
+                        *active_popup = Popup::OpenFile;
+                        *status_msg = Some("Cont. w/o saving".to_string());
                     }   
                 });
             });
@@ -213,18 +262,13 @@ impl epi::App for CodeShare {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.horizontal_top(|ui| {
                     let mut lines_str = get_line_num_str(text_buf.lines().count());
-                    // ui.add_sized([40.0, ui.available_height()], egui::TextEdit::multiline(&mut lines_str)
-                    //     .desired_width(50.0)
-                    //     .code_editor()
-                    //     .frame(false)
-                    //     .interactive(false)
-                    // );
                     ui.add(egui::TextEdit::multiline(&mut lines_str)
                         .desired_width(config.get_font_size() * 2.7)
                         .code_editor()
                         .frame(false)
                         .interactive(false)
                     );
+                    ui.style_mut().wrap = Some(false);
                     let editor = ui.add_sized(ui.available_size(),
                         egui::TextEdit::multiline(text_buf)
                             .text_style(egui::TextStyle::Monospace)
@@ -260,7 +304,7 @@ impl epi::App for CodeShare {
                         .frame(false)
                         .interactive(false)
                         .text_color(egui::Color32::BLACK)
-                        .desired_width(150.0)
+                        .desired_width(config.get_font_size() * 10.0)
                     );
                 });
             });
@@ -271,30 +315,10 @@ impl epi::App for CodeShare {
 fn get_line_num_str(count: usize) -> String {
     let mut lines_str = String::new();
     for num in 1..=count {
-        match num {
-            num if num < 10 => {
-                lines_str.push_str("   ");
-                lines_str.push_str(&num.to_string());
-                lines_str.push('\n');
-            },
-            num if num < 100 => {
-                lines_str.push_str("  ");
-                lines_str.push_str(&num.to_string());
-                lines_str.push('\n');
-            },
-            num if num < 1000 => {
-                lines_str.push_str(" ");
-                lines_str.push_str(&num.to_string());
-                lines_str.push('\n');
-            },
-            num if num >= 1000 => {
-                lines_str.push_str(&num.to_string());
-                lines_str.push('\n');
-            }
-            _ => (),
-        }
+        lines_str.push_str(&num.to_string());
+        lines_str.push('\n');
     }
-    lines_str.push_str("   ~");
+    lines_str.push_str("~");
     lines_str
 }
 
@@ -304,7 +328,8 @@ enum Popup {
     OpenFile,
     SaveFile,
     SaveAs,
-    FileNotSaved,
+    FileNotSavedNew,
+    FileNotSavedOpen,
     Error,
     None,
 }
