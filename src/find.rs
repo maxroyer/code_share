@@ -22,7 +22,7 @@ impl FindTools {
         self.match_locations = Vec::new();
         self.selected_loc = 0;
     }
-    
+
     pub fn get_query(&self) -> String { self.query_buf.clone() }
 
     pub fn get_current_match(&self) -> Option<(usize, usize)> {
@@ -34,18 +34,18 @@ impl FindTools {
     }
 
     pub fn selected_loc_inc(&mut self) {
-        if self.selected_loc < self.match_locations.len() {
-            self.selected_loc += 1;
+        if self.selected_loc == self.match_locations.len() - 1 {
+            self.selected_loc = 0;
         }
         else {
-            self.selected_loc = 0;
+            self.selected_loc += 1;
         }
         
         
     }
     pub fn selected_loc_dec(&mut self) {
         if self.selected_loc == 0 {
-            self.selected_loc = self.match_locations.len();
+            self.selected_loc = self.match_locations.len() - 1;
         }
         else {
             self.selected_loc -= 1;

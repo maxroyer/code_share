@@ -24,4 +24,4 @@ persistence = ["eframe/persistence", "serde"] # Enable if you want to persist ap
 opt-level = 2 # fast and small wasm
 
 [patch.crates-io]
-
+eframe = { git = "https://github.com/emilk/egui", branch = "master" }

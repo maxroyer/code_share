@@ -1,4 +1,3 @@
-use std::borrow::BorrowMut;
 use eframe::egui::Color32;
 use eframe::epi;
 use eframe::egui;
@@ -18,6 +17,7 @@ pub struct CodeShare {
     active_popup: Popup,
     err_msg: Option<String>,
     status_msg: Option<String>,
+    switch_to_editor: bool,
 }
 
 impl Default for CodeShare {
@@ -30,6 +30,7 @@ impl Default for CodeShare {
             active_popup: Popup::None,
             err_msg: None,
             status_msg: Some("code_share loaded".to_string()),
+            switch_to_editor: false,
         }
     }
 }
@@ -80,11 +81,12 @@ impl epi::App for CodeShare {
             active_popup,
             err_msg,
             status_msg,
+            switch_to_editor,
         } = self;
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
-                egui::menu::menu(ui, "File", |ui| {
+                egui::menu::menu_button(ui, "File", |ui| {
                     if ui.button("New").clicked() {
                         match file_status.is_unsaved() {
                             false => {
@@ -118,10 +120,10 @@ impl epi::App for CodeShare {
                         frame.quit();
                     }
                 });
-                egui::menu::menu(ui, "Edit", |ui| {
+                egui::menu::menu_button(ui, "Edit", |ui| {
                     ui.label("to be built");
                 });
-                egui::menu::menu(ui, "View", |ui| {
+                egui::menu::menu_button(ui, "View", |ui| {
                     ui.horizontal(|ui| {
                         if ui.button(" - ").clicked() {
                            config.dec_font_size();
@@ -135,7 +137,7 @@ impl epi::App for CodeShare {
                         }
                     });
                 });
-                egui::menu::menu(ui, "Tools", |ui| {
+                egui::menu::menu_button(ui, "Tools", |ui| {
                     if ui.button("Find").clicked() {
                         *active_popup = Popup::Find;
                     }
@@ -251,17 +253,17 @@ impl epi::App for CodeShare {
                         for (loc, _str) in text_buf.match_indices(&query) {
                             finder.add_match(loc);
                         }
-                        CodeShare::highlight_text(ui, finder);
+                        CodeShare::highlight_text(ctx, finder, switch_to_editor);
                     }
                 });
                 ui.horizontal(|ui| {
                     if ui.button("Previous").clicked() {
                         finder.selected_loc_dec();
-                        CodeShare::highlight_text(ui, finder);
+                        CodeShare::highlight_text(ctx, finder, switch_to_editor);
                     }
                     if ui.button("Next").clicked() {
                         finder.selected_loc_inc();
-                        CodeShare::highlight_text(ui, finder);                            
+                        CodeShare::highlight_text(ctx, finder, switch_to_editor);                            
                     }
                     if ui.button("Close").clicked() {
                         finder.full_reset();
@@ -344,6 +346,10 @@ impl epi::App for CodeShare {
                     if editor.changed() {
                         file_status.set_unsaved(true);
                     }
+                    if *switch_to_editor == true {
+                        editor.request_focus();
+                        *switch_to_editor = false;
+                    }
                 });
             });  
         });
@@ -387,16 +393,16 @@ impl CodeShare {
         ctx.set_fonts(fonts);
     }
 
-    fn highlight_text(ui: &egui::Ui, finder: &mut FindTools) {
-        if let Some(mut cursor_pair) =  egui::TextEdit::cursor(ui, egui::Id::new("editor")) {
+    fn highlight_text(ctx: &egui::CtxRef, finder: &mut FindTools, switch_to_editor: &mut bool) {
+        if let Some(mut editor_state) =  egui::TextEdit::load_state(ctx, egui::Id::new("editor")) {
             //println!("cursor debug:{:?}", cursor_pair);
-            let mut rear_curs = cursor_pair.secondary.ccursor.borrow_mut();
-            let mut lead_curs = cursor_pair.primary.ccursor.borrow_mut();
-                        
+            
             if let Some((start_index, len)) = finder.get_current_match() {
-                rear_curs.index = start_index;
-                lead_curs.index = start_index + len;
-                println!("cursor debug:{:?}", cursor_pair);
+                let min_curs = egui::epaint::text::cursor::CCursor::new(start_index);
+                let max_curs = egui::epaint::text::cursor::CCursor::new(start_index+len);
+                editor_state.set_ccursor_range(Some(egui::text_edit::CCursorRange::two(min_curs, max_curs)));
+                egui::TextEdit::store_state(ctx, egui::Id::new("editor"), editor_state);
+                *switch_to_editor = true;
             }
         }
     }
