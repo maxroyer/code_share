@@ -1,7 +1,9 @@
+use eframe::egui::Color32;
 use eframe::epi;
 use eframe::egui;
 use crate::file::*;
 use crate::app_config::AppConfig;
+use crate::find::FindTools;
 
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "persistence", serde(default))]
@@ -11,6 +13,7 @@ pub struct CodeShare {
     #[cfg_attr(feature = "persistence", serde(skip))]
     file_status: FileStatus,
     text_buf: String,
+    finder: FindTools,
     active_popup: Popup,
     err_msg: Option<String>,
     status_msg: Option<String>,
@@ -33,6 +36,7 @@ impl Default for CodeShare {
             config: AppConfig::default(),
             file_status: FileStatus::default(),
             text_buf: String::new(),
+            finder: FindTools::default(),
             active_popup: Popup::None,
             err_msg: None,
             status_msg: Some("code_share loaded".to_string()),
@@ -88,6 +92,7 @@ impl epi::App for CodeShare {
             config,
             file_status,
             text_buf,
+            finder,
             active_popup,
             err_msg,
             status_msg,
@@ -145,6 +150,14 @@ impl epi::App for CodeShare {
                             CodeShare::change_app_font_size(ctx, config.get_font_size());
                         }
                     });
+                });
+                egui::menu::menu(ui, "Tools", |ui| {
+                    if ui.button("Find").clicked() {
+                        *active_popup = Popup::Find;
+                    }
+                    if ui.button("Find and Replace").clicked() {
+                        *active_popup = Popup::FindAndReplace;
+                    }
                 });
             });
         });
@@ -243,6 +256,33 @@ impl epi::App for CodeShare {
                 });
             });
         }
+        //  Find Popup
+        if *active_popup == Popup::Find {
+            egui::Window::new("Find").collapsible(false).show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.add(egui::widgets::TextEdit::singleline(&mut finder.query_buf).hint_text("Find"));
+                    if ui.button("Find").clicked() {
+                        let query = finder.get_query();
+                        for (loc, _str) in text_buf.match_indices(&query) {
+                            finder.add_match(loc);
+                        }
+                    }
+                });
+                ui.horizontal(|ui| {
+                    if ui.button("Previous").clicked() {
+
+                    }
+                    if ui.button("Next").clicked() {
+
+                    }
+                    if ui.button("Close").clicked() {
+                        finder.reset();
+                        *active_popup = Popup::None;
+                    }
+                });
+                
+            });
+        }
         //  Error Popup
         if *active_popup == Popup::Error {
             egui::Window::new("Error").collapsible(false).show(ctx, |ui| {
@@ -258,7 +298,7 @@ impl epi::App for CodeShare {
             });
         }
 
-        egui::CentralPanel::default().frame(egui::Frame::none().corner_radius(0.0)).show(ctx, |ui| {
+        egui::CentralPanel::default().frame(egui::Frame::none().fill(Color32::from_rgb(14, 15, 23)).corner_radius(0.0)).show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.horizontal_top(|ui| {
                     let mut lines_str = get_line_num_str(text_buf.lines().count());
@@ -269,12 +309,13 @@ impl epi::App for CodeShare {
                         .interactive(false)
                     );
                     ui.style_mut().wrap = Some(false);
+                    ui.separator();
                     let editor = ui.add_sized(ui.available_size(),
                         egui::TextEdit::multiline(text_buf)
                             .text_style(egui::TextStyle::Monospace)
                             .code_editor()
                             .lock_focus(true)
-                            .desired_width(f32::INFINITY)
+                            .frame(false)
                     );
                     if editor.changed() {
                         file_status.set_unsaved(true);
@@ -283,7 +324,7 @@ impl epi::App for CodeShare {
             });  
         });
 
-        egui::TopBottomPanel::bottom("info bar").frame(egui::Frame::none().corner_radius(0.0).fill(egui::Color32::WHITE)).show(ctx, |ui| {
+        egui::TopBottomPanel::bottom("info bar").frame(egui::Frame::none().fill(Color32::from_rgb(232, 188, 68)).corner_radius(0.0)).show(ctx, |ui| {
             let indicator = match file_status.is_unsaved() {true => "*", false => ""};
             let mut title_line = format!("{}{}", file_status.get_path_string(), indicator);
             ui.horizontal(|ui| {
@@ -303,7 +344,7 @@ impl epi::App for CodeShare {
                         .code_editor()
                         .frame(false)
                         .interactive(false)
-                        .text_color(egui::Color32::BLACK)
+                        .text_color(Color32::BLACK)
                         .desired_width(config.get_font_size() * 10.0)
                     );
                 });
@@ -331,5 +372,7 @@ enum Popup {
     FileNotSavedNew,
     FileNotSavedOpen,
     Error,
+    Find,
+    FindAndReplace,
     None,
 }

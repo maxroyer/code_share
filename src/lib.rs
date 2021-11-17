@@ -5,6 +5,7 @@
 mod app;
 mod file;
 mod app_config;
+mod find;
 pub use app::CodeShare;
 
 // ----------------------------------------------------------------------------
