@@ -268,13 +268,16 @@ impl epi::App for CodeShare {
                         prev_but.enabled();
                         next_but.enabled();
                     }
-                    
                     if prev_but.clicked() && finder.number_of_matches() != 0 {
-                        finder.selected_loc_dec();
+                        if finder.initial_click_made {
+                            finder.selected_loc_dec();
+                        }
                         CodeShare::highlight_text(ctx, finder, switch_to_editor);
                     }
                     if next_but.clicked() && finder.number_of_matches() != 0 {
-                        finder.selected_loc_inc();
+                        if finder.initial_click_made {
+                            finder.selected_loc_inc();
+                        }
                         CodeShare::highlight_text(ctx, finder, switch_to_editor);                            
                     }
                     if ui.button("Close").clicked() && finder.number_of_matches() != 0 {
@@ -426,6 +429,7 @@ impl CodeShare {
                 let max_curs = egui::epaint::text::cursor::CCursor::new(start_index+len);
                 editor_state.set_ccursor_range(Some(egui::text_edit::CCursorRange::two(min_curs, max_curs)));
                 egui::TextEdit::store_state(ctx, egui::Id::new("editor"), editor_state);
+                finder.initial_click_made = false; // Don't change this property with .get_current_match()
             }
         }
     }

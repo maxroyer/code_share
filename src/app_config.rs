@@ -24,7 +24,7 @@ impl AppConfig {
         }
     }
 
-    pub fn set_line_nums(&mut self, state: bool) {
+    pub fn _set_line_nums(&mut self, state: bool) {
         self.line_nums = state;
     }
 }
