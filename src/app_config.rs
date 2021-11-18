@@ -1,11 +1,12 @@
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
 pub struct AppConfig {
-    font_size: u32
+    font_size: u32,
+    pub line_nums: bool,
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
-        AppConfig { font_size: 15 }
+        AppConfig { font_size: 15, line_nums: true, }
     }
 }
 
@@ -21,5 +22,9 @@ impl AppConfig {
         if self.font_size > 0 {
             self.font_size += 1;
         }
+    }
+
+    pub fn set_line_nums(&mut self, state: bool) {
+        self.line_nums = state;
     }
 }

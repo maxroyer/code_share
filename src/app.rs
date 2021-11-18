@@ -124,6 +124,7 @@ impl epi::App for CodeShare {
                     ui.label("to be built");
                 });
                 egui::menu::menu_button(ui, "View", |ui| {
+                    ui.checkbox(&mut config.line_nums, "Line Numbers");
                     ui.horizontal(|ui| {
                         if ui.button(" - ").clicked() {
                            config.dec_font_size();
@@ -339,12 +340,14 @@ impl epi::App for CodeShare {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.horizontal_top(|ui| {
                     let mut lines_str = get_line_num_str(text_buf.lines().count());
-                    ui.add(egui::TextEdit::multiline(&mut lines_str)
-                        .desired_width(config.get_font_size() * 2.7)
-                        .code_editor()
-                        .frame(false)
-                        .interactive(false)
-                    );
+                    if config.line_nums {
+                        ui.add(egui::TextEdit::multiline(&mut lines_str)
+                            .desired_width(config.get_font_size() * 2.7)
+                            .code_editor()
+                            .frame(false)
+                            .interactive(false)
+                        );
+                    }
                     ui.separator();
                     let editor = ui.add_sized(ui.available_size(),
                         egui::TextEdit::multiline(text_buf)
