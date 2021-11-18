@@ -1,15 +1,15 @@
+use crate::app_config::AppConfig;
+use crate::file::*;
+use crate::find::FindTools;
+use eframe::egui;
 use eframe::egui::Color32;
 use eframe::epi;
-use eframe::egui;
-use crate::file::*;
-use crate::app_config::AppConfig;
-use crate::find::FindTools;
 
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "persistence", serde(default))]
 pub struct CodeShare {
     config: AppConfig,
-    
+
     #[cfg_attr(feature = "persistence", serde(skip))]
     file_status: FileStatus,
     text_buf: String,
@@ -46,7 +46,7 @@ impl epi::App for CodeShare {
         ctx: &egui::CtxRef,
         _frame: &mut epi::Frame<'_>,
         _storage: Option<&dyn epi::Storage>,
-    ) {        
+    ) {
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
         #[cfg(feature = "persistence")]
@@ -68,7 +68,6 @@ impl epi::App for CodeShare {
     fn save(&mut self, storage: &mut dyn epi::Storage) {
         epi::set_value(storage, epi::APP_KEY, self);
     }
-
 
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
@@ -93,22 +92,21 @@ impl epi::App for CodeShare {
                                 text_buf.clear();
                                 file_status.reset();
                                 *status_msg = Some("New File Opened".to_string());
-                            },
+                            }
                             true => {
                                 *active_popup = Popup::FileNotSavedNew;
                             }
                         }
                     }
-                    if ui.button("Open").clicked(){
+                    if ui.button("Open").clicked() {
                         match file_status.is_unsaved() {
                             false => {
                                 *active_popup = Popup::OpenFile;
-                            },
+                            }
                             true => {
                                 *active_popup = Popup::FileNotSavedOpen;
                             }
                         }
-                        
                     }
                     if ui.button("Save").clicked() {
                         *active_popup = Popup::SaveFile;
@@ -127,8 +125,8 @@ impl epi::App for CodeShare {
                     ui.checkbox(&mut config.line_nums, "Line Numbers");
                     ui.horizontal(|ui| {
                         if ui.button(" - ").clicked() {
-                           config.dec_font_size();
-                           CodeShare::change_app_font_size(ctx, config.get_font_size());
+                            config.dec_font_size();
+                            CodeShare::change_app_font_size(ctx, config.get_font_size());
                         }
                         let font_size_str = format!("Font Size: {}", config.get_font_size());
                         ui.label(font_size_str);
@@ -158,7 +156,7 @@ impl epi::App for CodeShare {
                         Ok(_) => {
                             *active_popup = Popup::None;
                             *status_msg = Some("Save Successful".to_string());
-                        },
+                        }
                         Err(e) => {
                             let error = format!("Save failed: {}", e);
                             *err_msg = Some(error);
@@ -176,11 +174,11 @@ impl epi::App for CodeShare {
                     *text_buf = contents;
                     *active_popup = Popup::None;
                     *status_msg = Some("Open Successful".to_string());
-                },
+                }
                 Ok(None) => {
                     *active_popup = Popup::None;
                     *status_msg = Some("Open Cancelled".to_string());
-                },
+                }
                 Err(e) => {
                     *err_msg = Some(e.to_string());
                     *active_popup = Popup::Error;
@@ -193,114 +191,123 @@ impl epi::App for CodeShare {
                 Ok(Some(_)) => {
                     *active_popup = Popup::None;
                     *status_msg = Some("Save Successful".to_string());
-                },
+                }
                 Ok(None) => {
                     *active_popup = Popup::None;
                     *status_msg = Some("Save Cancelled".to_string());
-                },
+                }
                 Err(e) => {
                     *err_msg = Some(e.to_string());
                     *active_popup = Popup::Error;
                 }
             };
-            
         }
         //  File not saved popup (creating new file)
         if *active_popup == Popup::FileNotSavedNew {
-            egui::Window::new("File Not Saved").collapsible(false).show(ctx, |ui| {
-                ui.label("Current file has not been saved");
-                ui.horizontal( |ui| {
-                    if ui.button("Save").clicked() {
-                        *active_popup = Popup::SaveFile;
-                    }
-                    if ui.button("Save As").clicked() {
-                        *active_popup = Popup::SaveAs;
-                    }
-                    if ui.button("Continue without saving").clicked() {
-                        text_buf.clear();
-                        file_status.reset();
-                        *active_popup = Popup::None;
-                        *status_msg = Some("Cont. w/o saving".to_string());
-                    }   
+            egui::Window::new("File Not Saved")
+                .collapsible(false)
+                .show(ctx, |ui| {
+                    ui.label("Current file has not been saved");
+                    ui.horizontal(|ui| {
+                        if ui.button("Save").clicked() {
+                            *active_popup = Popup::SaveFile;
+                        }
+                        if ui.button("Save As").clicked() {
+                            *active_popup = Popup::SaveAs;
+                        }
+                        if ui.button("Continue without saving").clicked() {
+                            text_buf.clear();
+                            file_status.reset();
+                            *active_popup = Popup::None;
+                            *status_msg = Some("Cont. w/o saving".to_string());
+                        }
+                    });
                 });
-            });
         }
         //  File not saved popup (opening different file)
         if *active_popup == Popup::FileNotSavedOpen {
-            egui::Window::new("File Not Saved").collapsible(false).show(ctx, |ui| {
-                ui.label("Current file has not been saved");
-                ui.horizontal( |ui| {
-                    if ui.button("Save").clicked() {
-                        *active_popup = Popup::SaveFile;
-                    }
-                    if ui.button("Save As").clicked() {
-                        *active_popup = Popup::SaveAs;
-                    }
-                    if ui.button("Continue without saving").clicked() {
-                        *active_popup = Popup::OpenFile;
-                        *status_msg = Some("Cont. w/o saving".to_string());
-                    }   
+            egui::Window::new("File Not Saved")
+                .collapsible(false)
+                .show(ctx, |ui| {
+                    ui.label("Current file has not been saved");
+                    ui.horizontal(|ui| {
+                        if ui.button("Save").clicked() {
+                            *active_popup = Popup::SaveFile;
+                        }
+                        if ui.button("Save As").clicked() {
+                            *active_popup = Popup::SaveAs;
+                        }
+                        if ui.button("Continue without saving").clicked() {
+                            *active_popup = Popup::OpenFile;
+                            *status_msg = Some("Cont. w/o saving".to_string());
+                        }
+                    });
                 });
-            });
         }
         //  Find Popup
         if *active_popup == Popup::Find {
-            egui::Window::new("Find").collapsible(false).show(ctx, |ui| {
-                ui.horizontal(|ui| {
-                    let search_box = ui.add(egui::widgets::TextEdit::singleline(&mut finder.query_buf).hint_text("Find"));
-                    if search_box.changed() && &finder.get_query() != "" {
-                        let query = finder.get_query();
-                        finder.reset_matches();
-                        for (loc, _str) in text_buf.match_indices(&query) {
-                            finder.add_match(loc);
+            egui::Window::new("Find")
+                .collapsible(false)
+                .show(ctx, |ui| {
+                    ui.horizontal(|ui| {
+                        let search_box = ui.add(
+                            egui::widgets::TextEdit::singleline(&mut finder.query_buf)
+                                .hint_text("Find"),
+                        );
+                        if search_box.changed() && &finder.get_query() != "" {
+                            let query = finder.get_query();
+                            finder.reset_matches();
+                            for (loc, _str) in text_buf.match_indices(&query) {
+                                finder.add_match(loc);
+                            }
+                            CodeShare::highlight_text_no_switch(ctx, finder);
+                        } else if &finder.get_query() == "" {
+                            finder.reset_matches();
                         }
-                        CodeShare::highlight_text_no_switch(ctx, finder);
-                    } else if &finder.get_query() == "" {
-                        finder.reset_matches();
-                    }
-                    let info_str = format!("{} maches found", finder.number_of_matches());
-                    ui.label(info_str);
+                        let info_str = format!("{} maches found", finder.number_of_matches());
+                        ui.label(info_str);
+                    });
+                    ui.horizontal(|ui| {
+                        let prev_but = ui.add(egui::widgets::Button::new("Previous"));
+                        let next_but = ui.add(egui::widgets::Button::new("Next"));
+                        if finder.number_of_matches() == 0 {
+                            prev_but.enabled();
+                            next_but.enabled();
+                        }
+                        if prev_but.clicked() && finder.number_of_matches() != 0 {
+                            if finder.initial_click_made {
+                                finder.selected_loc_dec();
+                            }
+                            CodeShare::highlight_text(ctx, finder, switch_to_editor);
+                        }
+                        if next_but.clicked() && finder.number_of_matches() != 0 {
+                            if finder.initial_click_made {
+                                finder.selected_loc_inc();
+                            }
+                            CodeShare::highlight_text(ctx, finder, switch_to_editor);
+                        }
+                        if ui.button("Close").clicked() {
+                            finder.full_reset();
+                            *active_popup = Popup::None;
+                        }
+                    });
                 });
-                ui.horizontal(|ui| {
-                    let prev_but = ui.add(egui::widgets::Button::new("Previous"));
-                    let next_but = ui.add(egui::widgets::Button::new("Next"));
-                    if finder.number_of_matches() == 0 {
-                        prev_but.enabled();
-                        next_but.enabled();
-                    }
-                    if prev_but.clicked() && finder.number_of_matches() != 0 {
-                        if finder.initial_click_made {
-                            finder.selected_loc_dec();
-                        }
-                        CodeShare::highlight_text(ctx, finder, switch_to_editor);
-                    }
-                    if next_but.clicked() && finder.number_of_matches() != 0 {
-                        if finder.initial_click_made {
-                            finder.selected_loc_inc();
-                        }
-                        CodeShare::highlight_text(ctx, finder, switch_to_editor);                            
-                    }
-                    if ui.button("Close").clicked() && finder.number_of_matches() != 0 {
-                        finder.full_reset();
-                        *active_popup = Popup::None;
-                    }
-                });
-                
-            });
         }
         //  Error Popup
         if *active_popup == Popup::Error {
-            egui::Window::new("Error").collapsible(false).show(ctx, |ui| {
-                let error = match err_msg {
-                    Some(msg) => msg.clone(),
-                    None => String::from("Unknown Error")
-                };
-                ui.label(error);
-                if ui.button("Close").clicked() {
-                    *active_popup = Popup::None;
-                    *err_msg = None;
-                }
-            });
+            egui::Window::new("Error")
+                .collapsible(false)
+                .show(ctx, |ui| {
+                    let error = match err_msg {
+                        Some(msg) => msg.clone(),
+                        None => String::from("Unknown Error"),
+                    };
+                    ui.label(error);
+                    if ui.button("Close").clicked() {
+                        *active_popup = Popup::None;
+                        *err_msg = None;
+                    }
+                });
         }
 
         //  Keyboard Shortcuts
@@ -315,7 +322,7 @@ impl epi::App for CodeShare {
                     text_buf.clear();
                     file_status.reset();
                     *status_msg = Some("New File Opened".to_string());
-                },
+                }
                 true => {
                     *active_popup = Popup::FileNotSavedNew;
                 }
@@ -326,77 +333,102 @@ impl epi::App for CodeShare {
             match file_status.is_unsaved() {
                 false => {
                     *active_popup = Popup::OpenFile;
-                },
+                }
                 true => {
                     *active_popup = Popup::FileNotSavedOpen;
                 }
             }
         }
 
-        egui::CentralPanel::default().frame(egui::Frame::none().fill(Color32::from_rgb(14, 15, 23)).corner_radius(0.0)).show(ctx, |ui| {
-            // REMOVE- prints curson location with ctrl press
-            // if ctx.input().modifiers.command == true {
-                
-            //     let cursor = egui::TextEdit::cursor(ui, egui::Id::new("editor"));
-            //     println!("cursor at: {:?}", cursor);
-            // }
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                ui.horizontal_top(|ui| {
-                    let mut lines_str = get_line_num_str(text_buf.lines().count());
-                    if config.line_nums {
-                        ui.add(egui::TextEdit::multiline(&mut lines_str)
-                            .desired_width(config.get_font_size() * 2.7)
+        egui::TopBottomPanel::bottom("info bar")
+            .frame(
+                egui::Frame::none()
+                    .fill(Color32::from_rgb(232, 188, 68))
+                    .corner_radius(0.0),
+            )
+            .show(ctx, |ui| {
+                let indicator = match file_status.is_unsaved() {
+                    true => "*",
+                    false => "",
+                };
+                let mut title_line = format!("{}{}", file_status.get_path_string(), indicator);
+                ui.horizontal(|ui| {
+                    ui.add(
+                        egui::widgets::TextEdit::singleline(&mut title_line)
                             .code_editor()
                             .frame(false)
                             .interactive(false)
-                        );
-                    }
-                    ui.separator();
-                    let editor = ui.add_sized(ui.available_size(),
-                        egui::TextEdit::multiline(text_buf)
-                            .text_style(egui::TextStyle::Monospace)
-                            .code_editor()
-                            .lock_focus(true)
-                            .frame(false)
-                            .id(egui::Id::new("editor"))
+                            .text_color(egui::Color32::BLACK),
                     );
-                    if editor.changed() {
-                        file_status.set_unsaved(true);
-                    }
-                    if *switch_to_editor == true {
-                        editor.request_focus();
-                        *switch_to_editor = false;
-                    }
-                });
-            });  
-        });
 
-        egui::TopBottomPanel::bottom("info bar").frame(egui::Frame::none().fill(Color32::from_rgb(232, 188, 68)).corner_radius(0.0)).show(ctx, |ui| {
-            let indicator = match file_status.is_unsaved() {true => "*", false => ""};
-            let mut title_line = format!("{}{}", file_status.get_path_string(), indicator);
-            ui.horizontal(|ui| {
-                ui.add(egui::widgets::TextEdit::singleline(&mut title_line)
-                    .code_editor()
-                    .frame(false)
-                    .interactive(false)
-                    .text_color(egui::Color32::BLACK)
-                );
-                
-                ui.with_layout(egui::Layout::right_to_left(), |ui| {
-                    let mut msg_to_display = match status_msg {
-                        Some(msg) => msg,
-                        None => ""
-                    };
-                    ui.add(egui::widgets::TextEdit::singleline(&mut msg_to_display)
-                        .code_editor()
-                        .frame(false)
-                        .interactive(false)
-                        .text_color(Color32::BLACK)
-                        .desired_width(config.get_font_size() * 10.0)
-                    );
+                    ui.with_layout(egui::Layout::right_to_left(), |ui| {
+                        let mut msg_to_display = match status_msg {
+                            Some(msg) => msg,
+                            None => "",
+                        };
+                        ui.add(
+                            egui::widgets::TextEdit::singleline(&mut msg_to_display)
+                                .code_editor()
+                                .frame(false)
+                                .interactive(false)
+                                .text_color(Color32::BLACK)
+                                .desired_width(config.get_font_size() * 10.0),
+                        );
+                    });
                 });
             });
-        });
+
+        let mut style = (*ctx.style()).clone();
+        style.wrap = Some(false);
+        ctx.set_style(style);
+        egui::CentralPanel::default()
+            .frame(
+                egui::Frame::none()
+                    .fill(Color32::from_rgb(14, 15, 23))
+                    .corner_radius(0.0),
+            )
+            .show(ctx, |ui| {
+                // REMOVE- prints curson location with ctrl press
+                // if ctx.input().modifiers.command == true {
+
+                //     let cursor = egui::TextEdit::cursor(ui, egui::Id::new("editor"));
+                //     println!("cursor at: {:?}", cursor);
+                // }
+
+                egui::ScrollArea::both().show(ui, |ui| {
+                    ui.horizontal_top(|ui| {
+                        let mut lines_str = get_line_num_str(text_buf.lines().count());
+                        if config.line_nums {
+                            ui.add(
+                                egui::TextEdit::multiline(&mut lines_str)
+                                    .desired_width(config.get_font_size() * 2.7)
+                                    .code_editor()
+                                    .frame(false)
+                                    .interactive(false),
+                            );
+                        }
+                        ui.separator();
+
+                        let editor = ui.add_sized(
+                            ui.available_size(),
+                            egui::TextEdit::multiline(text_buf)
+                                .text_style(egui::TextStyle::Monospace)
+                                .code_editor()
+                                .lock_focus(true)
+                                .frame(false)
+                                .id(egui::Id::new("editor")),
+                        );
+                        if editor.changed() {
+                            file_status.set_unsaved(true);
+                        }
+                        if *switch_to_editor == true {
+                            editor.request_focus();
+                            //editor.
+                            *switch_to_editor = false;
+                        }
+                    });
+                });
+            });
     }
 }
 
@@ -405,17 +437,19 @@ impl CodeShare {
         let mut fonts = egui::FontDefinitions::default();
         fonts.family_and_size.insert(
             egui::TextStyle::Monospace,
-            (egui::FontFamily::Monospace, size)
+            (egui::FontFamily::Monospace, size),
         );
         ctx.set_fonts(fonts);
     }
 
     fn highlight_text(ctx: &egui::CtxRef, finder: &mut FindTools, switch_to_editor: &mut bool) {
-        if let Some(mut editor_state) =  egui::TextEdit::load_state(ctx, egui::Id::new("editor")) {
+        if let Some(mut editor_state) = egui::TextEdit::load_state(ctx, egui::Id::new("editor")) {
             if let Some((start_index, len)) = finder.get_current_match() {
                 let min_curs = egui::epaint::text::cursor::CCursor::new(start_index);
-                let max_curs = egui::epaint::text::cursor::CCursor::new(start_index+len);
-                editor_state.set_ccursor_range(Some(egui::text_edit::CCursorRange::two(min_curs, max_curs)));
+                let max_curs = egui::epaint::text::cursor::CCursor::new(start_index + len);
+                editor_state.set_ccursor_range(Some(egui::text_edit::CCursorRange::two(
+                    min_curs, max_curs,
+                )));
                 egui::TextEdit::store_state(ctx, egui::Id::new("editor"), editor_state);
                 *switch_to_editor = true;
             }
@@ -423,11 +457,13 @@ impl CodeShare {
     }
 
     fn highlight_text_no_switch(ctx: &egui::CtxRef, finder: &mut FindTools) {
-        if let Some(mut editor_state) =  egui::TextEdit::load_state(ctx, egui::Id::new("editor")) {
+        if let Some(mut editor_state) = egui::TextEdit::load_state(ctx, egui::Id::new("editor")) {
             if let Some((start_index, len)) = finder.get_current_match() {
                 let min_curs = egui::epaint::text::cursor::CCursor::new(start_index);
-                let max_curs = egui::epaint::text::cursor::CCursor::new(start_index+len);
-                editor_state.set_ccursor_range(Some(egui::text_edit::CCursorRange::two(min_curs, max_curs)));
+                let max_curs = egui::epaint::text::cursor::CCursor::new(start_index + len);
+                editor_state.set_ccursor_range(Some(egui::text_edit::CCursorRange::two(
+                    min_curs, max_curs,
+                )));
                 egui::TextEdit::store_state(ctx, egui::Id::new("editor"), editor_state);
                 finder.initial_click_made = false; // Don't change this property with .get_current_match()
             }

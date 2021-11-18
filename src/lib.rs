@@ -3,8 +3,8 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
 mod app;
-mod file;
 mod app_config;
+mod file;
 mod find;
 pub use app::CodeShare;
 
