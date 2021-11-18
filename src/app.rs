@@ -383,8 +383,6 @@ impl epi::App for CodeShare {
                 });
             });
 
-        
-        
         egui::CentralPanel::default()
             .frame(
                 egui::Frame::none()
@@ -392,7 +390,7 @@ impl epi::App for CodeShare {
                     .corner_radius(0.0),
             )
             .show(ctx, |ui| {
-                egui::ScrollArea::both().always_show_scroll(true).show(ui, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| {
                     ui.horizontal_top(|ui| {
                         let mut lines_str = get_line_num_str(text_buf.lines().count());
                         if config.line_nums {
@@ -401,28 +399,36 @@ impl epi::App for CodeShare {
                                     .desired_width(config.get_font_size() * 2.7)
                                     .code_editor()
                                     .frame(false)
-                                    .interactive(false)
+                                    .interactive(false),
                             );
                         }
                         ui.separator();
-                        let editor = ui.add_sized(
-                            ui.available_size(),
-                            egui::TextEdit::multiline(text_buf)
-                                .text_style(egui::TextStyle::Monospace)
-                                .code_editor()
-                                .lock_focus(true)
-                                .frame(false)
-                                .id(egui::Id::new("editor"))
-                                .desired_width(f32::INFINITY)
-                        );
-                        if editor.changed() {
-                            file_status.set_unsaved(true);
-                        }
-                        if *switch_to_editor == true {
-                            editor.request_focus();
-                            //editor.
-                            *switch_to_editor = false;
-                        }
+                        egui::ScrollArea::horizontal().show(ui, |ui| {
+                            let mut layouter = |ui: &egui::Ui, string: &str, _wrap_width: f32| {
+                                ui.fonts().layout_no_wrap(
+                                    string.to_string(),
+                                    egui::TextStyle::Monospace,
+                                    Color32::WHITE,
+                                )
+                            };
+                            let editor = ui.add_sized(
+                                ui.available_size(),
+                                egui::TextEdit::multiline(text_buf)
+                                    .code_editor()
+                                    .lock_focus(true)
+                                    .frame(false)
+                                    .id(egui::Id::new("editor"))
+                                    .desired_width(f32::INFINITY)
+                                    .layouter(&mut layouter),
+                            );
+                            if editor.changed() {
+                                file_status.set_unsaved(true);
+                            }
+                            if *switch_to_editor == true {
+                                editor.request_focus();
+                                *switch_to_editor = false;
+                            }
+                        });
                     });
                 });
             });
