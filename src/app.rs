@@ -257,14 +257,6 @@ impl epi::App for CodeShare {
                     } else if &finder.get_query() == "" {
                         finder.reset_matches();
                     }
-                    // if ui.button("Search").clicked() {
-                    //     let query = finder.get_query();
-                    //     finder.reset_matches();
-                    //     for (loc, _str) in text_buf.match_indices(&query) {
-                    //         finder.add_match(loc);
-                    //     }
-                    //     CodeShare::highlight_text(ctx, finder, switch_to_editor);
-                    // }
                     let info_str = format!("{} maches found", finder.number_of_matches());
                     ui.label(info_str);
                 });

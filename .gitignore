@@ -1,3 +1,5 @@
 /target
 /.vscode
 code_share.code-workspace
+src/app.rs
+install.sh
