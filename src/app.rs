@@ -246,26 +246,45 @@ impl epi::App for CodeShare {
         if *active_popup == Popup::Find {
             egui::Window::new("Find").collapsible(false).show(ctx, |ui| {
                 ui.horizontal(|ui| {
-                    ui.add(egui::widgets::TextEdit::singleline(&mut finder.query_buf).hint_text("Find"));
-                    if ui.button("Find").clicked() {
+                    let search_box = ui.add(egui::widgets::TextEdit::singleline(&mut finder.query_buf).hint_text("Find"));
+                    if search_box.changed() && &finder.get_query() != "" {
                         let query = finder.get_query();
                         finder.reset_matches();
                         for (loc, _str) in text_buf.match_indices(&query) {
                             finder.add_match(loc);
                         }
-                        CodeShare::highlight_text(ctx, finder, switch_to_editor);
+                        CodeShare::highlight_text_no_switch(ctx, finder);
+                    } else if &finder.get_query() == "" {
+                        finder.reset_matches();
                     }
+                    // if ui.button("Search").clicked() {
+                    //     let query = finder.get_query();
+                    //     finder.reset_matches();
+                    //     for (loc, _str) in text_buf.match_indices(&query) {
+                    //         finder.add_match(loc);
+                    //     }
+                    //     CodeShare::highlight_text(ctx, finder, switch_to_editor);
+                    // }
+                    let info_str = format!("{} maches found", finder.number_of_matches());
+                    ui.label(info_str);
                 });
                 ui.horizontal(|ui| {
-                    if ui.button("Previous").clicked() {
+                    let prev_but = ui.add(egui::widgets::Button::new("Previous"));
+                    let next_but = ui.add(egui::widgets::Button::new("Next"));
+                    if finder.number_of_matches() == 0 {
+                        prev_but.enabled();
+                        next_but.enabled();
+                    }
+                    
+                    if prev_but.clicked() && finder.number_of_matches() != 0 {
                         finder.selected_loc_dec();
                         CodeShare::highlight_text(ctx, finder, switch_to_editor);
                     }
-                    if ui.button("Next").clicked() {
+                    if next_but.clicked() && finder.number_of_matches() != 0 {
                         finder.selected_loc_inc();
                         CodeShare::highlight_text(ctx, finder, switch_to_editor);                            
                     }
-                    if ui.button("Close").clicked() {
+                    if ui.button("Close").clicked() && finder.number_of_matches() != 0 {
                         finder.full_reset();
                         *active_popup = Popup::None;
                     }
@@ -395,14 +414,23 @@ impl CodeShare {
 
     fn highlight_text(ctx: &egui::CtxRef, finder: &mut FindTools, switch_to_editor: &mut bool) {
         if let Some(mut editor_state) =  egui::TextEdit::load_state(ctx, egui::Id::new("editor")) {
-            //println!("cursor debug:{:?}", cursor_pair);
-            
             if let Some((start_index, len)) = finder.get_current_match() {
                 let min_curs = egui::epaint::text::cursor::CCursor::new(start_index);
                 let max_curs = egui::epaint::text::cursor::CCursor::new(start_index+len);
                 editor_state.set_ccursor_range(Some(egui::text_edit::CCursorRange::two(min_curs, max_curs)));
                 egui::TextEdit::store_state(ctx, egui::Id::new("editor"), editor_state);
                 *switch_to_editor = true;
+            }
+        }
+    }
+
+    fn highlight_text_no_switch(ctx: &egui::CtxRef, finder: &mut FindTools) {
+        if let Some(mut editor_state) =  egui::TextEdit::load_state(ctx, egui::Id::new("editor")) {
+            if let Some((start_index, len)) = finder.get_current_match() {
+                let min_curs = egui::epaint::text::cursor::CCursor::new(start_index);
+                let max_curs = egui::epaint::text::cursor::CCursor::new(start_index+len);
+                editor_state.set_ccursor_range(Some(egui::text_edit::CCursorRange::two(min_curs, max_curs)));
+                egui::TextEdit::store_state(ctx, egui::Id::new("editor"), editor_state);
             }
         }
     }

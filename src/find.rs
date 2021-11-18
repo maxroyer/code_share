@@ -33,6 +33,8 @@ impl FindTools {
         else { None }
     }
 
+    pub fn number_of_matches(&self) -> usize { self.match_locations.len() }
+
     pub fn selected_loc_inc(&mut self) {
         if self.selected_loc == self.match_locations.len() - 1 {
             self.selected_loc = 0;
