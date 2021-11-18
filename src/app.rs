@@ -60,6 +60,11 @@ impl epi::App for CodeShare {
         self.active_popup = Popup::None;
         self.file_status.set_unsaved(false);
         self.finder.full_reset();
+
+        //  Disable text wrapping
+        let mut style = (*ctx.style()).clone();
+        style.wrap = Some(false);
+        ctx.set_style(style);
     }
 
     /// Called by the frame work to save state before shutdown.
@@ -378,9 +383,8 @@ impl epi::App for CodeShare {
                 });
             });
 
-        let mut style = (*ctx.style()).clone();
-        style.wrap = Some(false);
-        ctx.set_style(style);
+        
+        
         egui::CentralPanel::default()
             .frame(
                 egui::Frame::none()
@@ -388,14 +392,7 @@ impl epi::App for CodeShare {
                     .corner_radius(0.0),
             )
             .show(ctx, |ui| {
-                // REMOVE- prints curson location with ctrl press
-                // if ctx.input().modifiers.command == true {
-
-                //     let cursor = egui::TextEdit::cursor(ui, egui::Id::new("editor"));
-                //     println!("cursor at: {:?}", cursor);
-                // }
-
-                egui::ScrollArea::both().show(ui, |ui| {
+                egui::ScrollArea::both().always_show_scroll(true).show(ui, |ui| {
                     ui.horizontal_top(|ui| {
                         let mut lines_str = get_line_num_str(text_buf.lines().count());
                         if config.line_nums {
@@ -404,11 +401,10 @@ impl epi::App for CodeShare {
                                     .desired_width(config.get_font_size() * 2.7)
                                     .code_editor()
                                     .frame(false)
-                                    .interactive(false),
+                                    .interactive(false)
                             );
                         }
                         ui.separator();
-
                         let editor = ui.add_sized(
                             ui.available_size(),
                             egui::TextEdit::multiline(text_buf)
@@ -416,7 +412,8 @@ impl epi::App for CodeShare {
                                 .code_editor()
                                 .lock_focus(true)
                                 .frame(false)
-                                .id(egui::Id::new("editor")),
+                                .id(egui::Id::new("editor"))
+                                .desired_width(f32::INFINITY)
                         );
                         if editor.changed() {
                             file_status.set_unsaved(true);
