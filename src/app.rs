@@ -391,26 +391,28 @@ impl epi::App for CodeShare {
             )
             .show(ctx, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
+                    let mut layouter = |ui: &egui::Ui, string: &str, _wrap_width: f32| {
+                        ui.fonts().layout_no_wrap(
+                            string.to_string(),
+                            egui::TextStyle::Monospace,
+                            Color32::WHITE,
+                        )
+                    };
                     ui.horizontal_top(|ui| {
                         let mut lines_str = get_line_num_str(text_buf.lines().count());
                         if config.line_nums {
                             ui.add(
                                 egui::TextEdit::multiline(&mut lines_str)
-                                    .desired_width(config.get_font_size() * 2.7)
+                                    //.desired_width(config.get_font_size() * 2.7)
+                                    .desired_width(0.0)
                                     .code_editor()
                                     .frame(false)
-                                    .interactive(false),
+                                    .interactive(false)
+                                    .layouter(&mut layouter)
                             );
                         }
                         ui.separator();
                         egui::ScrollArea::horizontal().show(ui, |ui| {
-                            let mut layouter = |ui: &egui::Ui, string: &str, _wrap_width: f32| {
-                                ui.fonts().layout_no_wrap(
-                                    string.to_string(),
-                                    egui::TextStyle::Monospace,
-                                    Color32::WHITE,
-                                )
-                            };
                             let editor = ui.add_sized(
                                 ui.available_size(),
                                 egui::TextEdit::multiline(text_buf)
@@ -475,13 +477,27 @@ impl CodeShare {
 }
 
 fn get_line_num_str(count: usize) -> String {
-    let mut lines_str = String::new();
-    for num in 1..=count {
-        lines_str.push_str(&num.to_string());
-        lines_str.push('\n');
+    let mut lines_str = String::with_capacity(count);
+    let num_digits = get_num_digits(count);
+    //TODO
+    for i in 1..=count {
+        let leading_spaces = num_digits - get_num_digits(i);
+        let temp_str = format!("{:width$}{}", "", i, width=leading_spaces);
+        lines_str.push_str(&format!("{}\n", temp_str));
     }
-    lines_str.push_str("~");
+
+
+    lines_str.push('~');
     lines_str
+}
+fn get_num_digits(num: usize) -> usize {
+    let mut num = num;
+    let mut dig_count: usize = 1;
+    while num / 10 > 0 {
+        num = num / 10;
+        dig_count += 1;
+    }
+    dig_count
 }
 
 #[derive(PartialEq)]
