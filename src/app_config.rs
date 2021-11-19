@@ -35,3 +35,52 @@ impl AppConfig {
         self.line_nums = state;
     }
 }
+
+#[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
+pub struct LineNumbers {
+    num_string: String,
+    pub line_count: usize,
+}
+
+impl Default for LineNumbers {
+    fn default() -> Self {
+        LineNumbers {
+            num_string: String::from("~"),
+            line_count: 0,
+        }
+    }
+}
+
+impl LineNumbers {
+    pub fn generate(&mut self, current_count: usize) -> String {
+        let Self { num_string, line_count } = self;
+        if *line_count != current_count {
+            num_string.clear();
+            let num_digits = LineNumbers::get_num_digits(current_count);
+            
+            for i in 1..=current_count {
+                let leading_spaces = num_digits - LineNumbers::get_num_digits(i);
+                let temp_str = format!("{:width$}{}", "", i, width=leading_spaces+1);
+                num_string.push_str(&format!("{}\n", temp_str));
+            }
+
+            num_string.push_str(&format!(" {:width$}~", "", width=num_digits-1));
+            return num_string.clone()
+        }
+        num_string.clone()
+    }
+    pub fn reset(&mut self) {
+        *self = Self::default();
+    }
+
+    fn get_num_digits(num: usize) -> usize {
+        let mut num = num;
+        let mut dig_count: usize = 1;
+        while num / 10 > 0 {
+            num = num / 10;
+            dig_count += 1;
+        }
+        dig_count
+    }
+    
+}

@@ -1,4 +1,4 @@
-use crate::app_config::AppConfig;
+use crate::app_config::{AppConfig, LineNumbers};
 use crate::file::*;
 use crate::find::FindTools;
 use eframe::egui;
@@ -13,6 +13,7 @@ pub struct CodeShare {
     #[cfg_attr(feature = "persistence", serde(skip))]
     file_status: FileStatus,
     text_buf: String,
+    line_nums: Option<LineNumbers>,
     finder: FindTools,
     active_popup: Popup,
     err_msg: Option<String>,
@@ -26,6 +27,7 @@ impl Default for CodeShare {
             config: AppConfig::default(),
             file_status: FileStatus::default(),
             text_buf: String::new(),
+            line_nums: None,
             finder: FindTools::default(),
             active_popup: Popup::None,
             err_msg: None,
@@ -53,13 +55,26 @@ impl epi::App for CodeShare {
         if let Some(storage) = _storage {
             *self = epi::get_value(storage, epi::APP_KEY).unwrap_or_default()
         }
+        //  Set font to saved size
         CodeShare::change_app_font_size(ctx, self.config.get_font_size());
-        self.text_buf.clear();
+        //  Startup Message
         self.status_msg = Some("code_share loaded".to_string());
+        //  Reset Things that are saved even though they're excluded
+        self.text_buf.clear();
         self.err_msg = None;
         self.active_popup = Popup::None;
         self.file_status.set_unsaved(false);
         self.finder.full_reset();
+
+        //  Setup Line numbers
+        match self.config.line_nums {
+            true => {
+                self.line_nums = Some(LineNumbers::default());
+            },
+            false => {
+                self.line_nums = None;
+            }
+        }
 
         //  Disable text wrapping
         let mut style = (*ctx.style()).clone();
@@ -81,6 +96,7 @@ impl epi::App for CodeShare {
             config,
             file_status,
             text_buf,
+            line_nums,
             finder,
             active_popup,
             err_msg,
@@ -96,6 +112,9 @@ impl epi::App for CodeShare {
                             false => {
                                 text_buf.clear();
                                 file_status.reset();
+                                if let Some(ln) = line_nums {
+                                    ln.reset();
+                                }
                                 *status_msg = Some("New File Opened".to_string());
                             }
                             true => {
@@ -326,6 +345,9 @@ impl epi::App for CodeShare {
                 false => {
                     text_buf.clear();
                     file_status.reset();
+                    if let Some(ln) = line_nums {
+                        ln.reset();
+                    }
                     *status_msg = Some("New File Opened".to_string());
                 }
                 true => {
@@ -399,8 +421,20 @@ impl epi::App for CodeShare {
                         )
                     };
                     ui.horizontal_top(|ui| {
-                        let mut lines_str = get_line_num_str(text_buf.lines().count());
+                        
+                        //let mut lines_str = get_line_num_str(text_buf.lines().count());
+                        
                         if config.line_nums {
+                            let num_tool = match line_nums {
+                                Some(x) => x,
+                                None => {
+                                    *active_popup = Popup::Error;
+                                    *err_msg = Some("This shouldn't happend".into());
+                                    return;
+                                }
+                            };
+                            let current_line_count = text_buf.lines().count();
+                            let mut lines_str = num_tool.generate(current_line_count);
                             ui.add(
                                 egui::TextEdit::multiline(&mut lines_str)
                                     //.desired_width(config.get_font_size() * 2.7)
@@ -476,21 +510,21 @@ impl CodeShare {
     }
 }
 
-fn get_line_num_str(count: usize) -> String {
+fn _get_line_num_str(count: usize) -> String {
     let mut lines_str = String::with_capacity(count);
-    let num_digits = get_num_digits(count);
-    //TODO
+    let num_digits = _get_num_digits(count);
+    
     for i in 1..=count {
-        let leading_spaces = num_digits - get_num_digits(i);
+        let leading_spaces = num_digits - _get_num_digits(i);
         let temp_str = format!("{:width$}{}", "", i, width=leading_spaces);
         lines_str.push_str(&format!("{}\n", temp_str));
     }
 
 
-    lines_str.push('~');
+    lines_str.push_str(&format!("{:width$}~", "", width=num_digits-1));
     lines_str
 }
-fn get_num_digits(num: usize) -> usize {
+fn _get_num_digits(num: usize) -> usize {
     let mut num = num;
     let mut dig_count: usize = 1;
     while num / 10 > 0 {
