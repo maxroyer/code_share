@@ -5,6 +5,8 @@ pub struct FindTools {
     match_locations: Vec<usize>,
     selected_loc: usize,
     pub initial_click_made: bool,
+    pub replace_mode: bool,
+    pub replace: Replace,
 }
 
 impl Default for FindTools {
@@ -14,6 +16,8 @@ impl Default for FindTools {
             match_locations: Vec::new(),
             selected_loc: 0,
             initial_click_made: false,
+            replace_mode: false,
+            replace: Replace::default(),
         }
     }
 }
@@ -38,7 +42,7 @@ impl FindTools {
 
     pub fn get_current_match(&mut self) -> Option<(usize, usize)> {
         //Returns Some(current match starting index, current query len)
-        if !self.match_locations.is_empty(){
+        if !self.match_locations.is_empty() {
             self.initial_click_made = true;
             Some((
                 self.match_locations[self.selected_loc],
@@ -65,6 +69,19 @@ impl FindTools {
             self.selected_loc = self.match_locations.len() - 1;
         } else {
             self.selected_loc -= 1;
+        }
+    }
+}
+
+#[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
+pub struct Replace {
+    pub replace_buf: String,
+}
+
+impl Default for Replace {
+    fn default() -> Self {
+        Replace {
+            replace_buf: String::new(),
         }
     }
 }

@@ -284,16 +284,27 @@ impl epi::App for CodeShare {
                         } else if finder.get_query().is_empty() {
                             finder.reset_matches();
                         }
+                        ui.checkbox(&mut finder.replace_mode, "Replace");
                         let info_str = format!("{} maches found", finder.number_of_matches());
                         ui.label(info_str);
                     });
+                    if finder.replace_mode {
+                        ui.horizontal(|ui| {
+                            ui.add(egui::widgets::TextEdit::singleline(&mut finder.replace.replace_buf).hint_text("Replace"));
+                            if ui.button("Replace").clicked() {
+                                //TODO -> First make it so any matches 
+                                //get highlighted when typing in find 
+                                //query
+                            }
+                            if ui.button("Replace All").clicked() {
+                                // TODO -> &str.replacen()
+                            }
+                        });
+                    }
                     ui.horizontal(|ui| {
                         let prev_but = ui.add(egui::widgets::Button::new("Previous"));
                         let next_but = ui.add(egui::widgets::Button::new("Next"));
-                        if finder.number_of_matches() == 0 {
-                            prev_but.enabled();
-                            next_but.enabled();
-                        }
+                        
                         if prev_but.clicked() && finder.number_of_matches() != 0 {
                             if finder.initial_click_made {
                                 finder.selected_loc_dec();
@@ -507,29 +518,6 @@ impl CodeShare {
             }
         }
     }
-}
-
-fn _get_line_num_str(count: usize) -> String {
-    let mut lines_str = String::with_capacity(count);
-    let num_digits = _get_num_digits(count);
-
-    for i in 1..=count {
-        let leading_spaces = num_digits - _get_num_digits(i);
-        let temp_str = format!("{:width$}{}", "", i, width = leading_spaces);
-        lines_str.push_str(&format!("{}\n", temp_str));
-    }
-
-    lines_str.push_str(&format!("{:width$}~", "", width = num_digits - 1));
-    lines_str
-}
-fn _get_num_digits(num: usize) -> usize {
-    let mut num = num;
-    let mut dig_count: usize = 1;
-    while num / 10 > 0 {
-        num /= 10;
-        dig_count += 1;
-    }
-    dig_count
 }
 
 #[derive(PartialEq)]
