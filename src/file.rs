@@ -1,4 +1,3 @@
-use rfd;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
@@ -47,7 +46,7 @@ impl FileStatus {
         }
     }
 
-    pub fn save_file(&mut self, contents: &String) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn save_file(&mut self, contents: &str) -> Result<(), Box<dyn std::error::Error>> {
         let file_path = match &self.path {
             Some(path) => path,
             None => return Err("Path not set".into()),
@@ -76,19 +75,19 @@ impl FileStatus {
                 self.is_new = false;
                 self.is_unsaved = false;
                 self.path = Some(saved_path);
-                return Ok(Some(()));
+                Ok(Some(()))
             }
             Err(e) => {
                 let e_msg = format!("File not saved: {}", e);
-                return Err(e_msg.into());
+                Err(e_msg.into())
             }
         }
     }
 
     pub fn open_file(&mut self) -> Result<Option<String>, Box<dyn std::error::Error>> {
         let old_path = self.path.clone();
-        let old_is_unsaved = self.is_unsaved.clone();
-        let old_is_new = self.is_new.clone();
+        let old_is_unsaved = self.is_unsaved;
+        let old_is_new = self.is_new;
 
         let open_path = match Self::open_file_sel_dialog() {
             Some(p) => p,

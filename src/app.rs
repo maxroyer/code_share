@@ -59,7 +59,7 @@ impl epi::App for CodeShare {
         CodeShare::change_app_font_size(ctx, self.config.get_font_size());
         //  Startup Message
         self.status_msg = Some("code_share loaded".to_string());
-        //  Reset Things that are saved even though they're excluded
+        //  Reset Things that are saved even though they're allegedly excluded
         self.text_buf.clear();
         self.err_msg = None;
         self.active_popup = Popup::None;
@@ -68,12 +68,8 @@ impl epi::App for CodeShare {
 
         //  Setup Line numbers
         match self.config.line_nums {
-            true => {
-                self.line_nums = Some(LineNumbers::default());
-            },
-            false => {
-                self.line_nums = None;
-            }
+            true => self.line_nums = Some(LineNumbers::default()),
+            false => self.line_nums = None,
         }
 
         //  Disable text wrapping
@@ -278,14 +274,14 @@ impl epi::App for CodeShare {
                             egui::widgets::TextEdit::singleline(&mut finder.query_buf)
                                 .hint_text("Find"),
                         );
-                        if search_box.changed() && &finder.get_query() != "" {
+                        if search_box.changed() && !finder.get_query().is_empty() {
                             let query = finder.get_query();
                             finder.reset_matches();
                             for (loc, _str) in text_buf.match_indices(&query) {
                                 finder.add_match(loc);
                             }
                             CodeShare::highlight_text_no_switch(ctx, finder);
-                        } else if &finder.get_query() == "" {
+                        } else if finder.get_query().is_empty() {
                             finder.reset_matches();
                         }
                         let info_str = format!("{} maches found", finder.number_of_matches());
@@ -336,11 +332,11 @@ impl epi::App for CodeShare {
 
         //  Keyboard Shortcuts
         //  Save
-        if ctx.input().modifiers.command == true && ctx.input().key_pressed(egui::Key::S) == true {
+        if ctx.input().modifiers.command && ctx.input().key_pressed(egui::Key::S) {
             *active_popup = Popup::SaveFile;
         }
         //  New
-        if ctx.input().modifiers.command == true && ctx.input().key_pressed(egui::Key::N) == true {
+        if ctx.input().modifiers.command && ctx.input().key_pressed(egui::Key::N) {
             match file_status.is_unsaved() {
                 false => {
                     text_buf.clear();
@@ -356,7 +352,7 @@ impl epi::App for CodeShare {
             }
         }
         //  Open
-        if ctx.input().modifiers.command == true && ctx.input().key_pressed(egui::Key::O) == true {
+        if ctx.input().modifiers.command && ctx.input().key_pressed(egui::Key::O) {
             match file_status.is_unsaved() {
                 false => {
                     *active_popup = Popup::OpenFile;
@@ -365,6 +361,10 @@ impl epi::App for CodeShare {
                     *active_popup = Popup::FileNotSavedOpen;
                 }
             }
+        }
+        // Find
+        if ctx.input().modifiers.command && ctx.input().key_pressed(egui::Key::F) {
+            *active_popup = Popup::Find;
         }
 
         egui::TopBottomPanel::bottom("info bar")
@@ -421,9 +421,8 @@ impl epi::App for CodeShare {
                         )
                     };
                     ui.horizontal_top(|ui| {
-                        
                         //let mut lines_str = get_line_num_str(text_buf.lines().count());
-                        
+
                         if config.line_nums {
                             let num_tool = match line_nums {
                                 Some(x) => x,
@@ -442,7 +441,7 @@ impl epi::App for CodeShare {
                                     .code_editor()
                                     .frame(false)
                                     .interactive(false)
-                                    .layouter(&mut layouter)
+                                    .layouter(&mut layouter),
                             );
                         }
                         ui.separator();
@@ -460,7 +459,7 @@ impl epi::App for CodeShare {
                             if editor.changed() {
                                 file_status.set_unsaved(true);
                             }
-                            if *switch_to_editor == true {
+                            if *switch_to_editor {
                                 editor.request_focus();
                                 *switch_to_editor = false;
                             }
@@ -513,22 +512,21 @@ impl CodeShare {
 fn _get_line_num_str(count: usize) -> String {
     let mut lines_str = String::with_capacity(count);
     let num_digits = _get_num_digits(count);
-    
+
     for i in 1..=count {
         let leading_spaces = num_digits - _get_num_digits(i);
-        let temp_str = format!("{:width$}{}", "", i, width=leading_spaces);
+        let temp_str = format!("{:width$}{}", "", i, width = leading_spaces);
         lines_str.push_str(&format!("{}\n", temp_str));
     }
 
-
-    lines_str.push_str(&format!("{:width$}~", "", width=num_digits-1));
+    lines_str.push_str(&format!("{:width$}~", "", width = num_digits - 1));
     lines_str
 }
 fn _get_num_digits(num: usize) -> usize {
     let mut num = num;
     let mut dig_count: usize = 1;
     while num / 10 > 0 {
-        num = num / 10;
+        num /= 10;
         dig_count += 1;
     }
     dig_count

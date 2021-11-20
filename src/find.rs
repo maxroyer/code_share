@@ -38,7 +38,7 @@ impl FindTools {
 
     pub fn get_current_match(&mut self) -> Option<(usize, usize)> {
         //Returns Some(current match starting index, current query len)
-        if self.match_locations.len() != 0 {
+        if !self.match_locations.is_empty(){
             self.initial_click_made = true;
             Some((
                 self.match_locations[self.selected_loc],
