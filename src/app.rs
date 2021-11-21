@@ -290,7 +290,7 @@ impl epi::App for CodeShare {
                     });
                     if finder.replace_mode {
                         ui.horizontal(|ui| {
-                            ui.add(egui::widgets::TextEdit::singleline(&mut finder.replace.replace_buf).hint_text("Replace"));
+                            ui.add(egui::widgets::TextEdit::singleline(&mut finder.replace_buf).hint_text("Replace"));
                             if ui.button("Replace").clicked() {
                                 //TODO -> First make it so any matches 
                                 //get highlighted when typing in find 
@@ -298,6 +298,10 @@ impl epi::App for CodeShare {
                             }
                             if ui.button("Replace All").clicked() {
                                 // TODO -> &str.replacen()
+                                for start_loc in (*finder).match_locations.iter() {
+                                    let end_loc = start_loc + finder.query_buf.chars().count();
+                                    text_buf.replace_range(start_loc..&end_loc, &finder.replace_buf);
+                                }
                             }
                         });
                     }

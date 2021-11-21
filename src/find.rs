@@ -2,11 +2,11 @@
 #[cfg_attr(feature = "persistence", serde(default))]
 pub struct FindTools {
     pub query_buf: String,
-    match_locations: Vec<usize>,
+    pub match_locations: Vec<usize>,
     selected_loc: usize,
     pub initial_click_made: bool,
     pub replace_mode: bool,
-    pub replace: Replace,
+    pub replace_buf: String,
 }
 
 impl Default for FindTools {
@@ -17,7 +17,7 @@ impl Default for FindTools {
             selected_loc: 0,
             initial_click_made: false,
             replace_mode: false,
-            replace: Replace::default(),
+            replace_buf: String::new(),
         }
     }
 }
@@ -73,15 +73,3 @@ impl FindTools {
     }
 }
 
-#[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
-pub struct Replace {
-    pub replace_buf: String,
-}
-
-impl Default for Replace {
-    fn default() -> Self {
-        Replace {
-            replace_buf: String::new(),
-        }
-    }
-}
