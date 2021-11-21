@@ -161,7 +161,8 @@ impl epi::App for CodeShare {
                         *active_popup = Popup::Find;
                     }
                     if ui.button("Find and Replace").clicked() {
-                        *active_popup = Popup::FindAndReplace;
+                        *active_popup = Popup::Find;
+                        finder.replace_mode = true;
                     }
                 });
             });
