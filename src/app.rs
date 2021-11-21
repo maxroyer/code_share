@@ -292,6 +292,18 @@ impl epi::App for CodeShare {
                         ui.horizontal(|ui| {
                             ui.add(egui::widgets::TextEdit::singleline(&mut finder.replace_buf).hint_text("Replace"));
                             if ui.button("Replace").clicked() {
+                                if finder.initial_click_made {
+                                    let (start_loc, end_loc) = match finder.get_current_match() {
+                                        Some((sl, len)) => (sl, sl+len),
+                                        None => {
+                                            *active_popup = Popup::Error;
+                                            *err_msg = Some("No text selected".into());
+                                            return
+                                        }   
+                                    };
+                                    text_buf.replace_range(start_loc..end_loc, &finder.replace_buf);
+                                }
+
                                 //TODO -> First make it so any matches 
                                 //get highlighted when typing in find 
                                 //query
