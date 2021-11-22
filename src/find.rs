@@ -45,7 +45,7 @@ impl FindTools {
                 self.match_locations[i] += rep_len - find_len;
             }
         } else if rep_len < find_len {
-            for i in self.selected_loc..self.match_locations.len() {
+            for i in self.selected_loc+1..self.match_locations.len() {
                 self.match_locations[i] -= find_len - rep_len;
             }
         }

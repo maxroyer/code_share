@@ -291,20 +291,19 @@ impl epi::App for CodeShare {
                     if finder.replace_mode {
                         ui.horizontal(|ui| {
                             ui.add(egui::widgets::TextEdit::singleline(&mut finder.replace_buf).hint_text("Replace"));
-                            if ui.button("Replace").clicked() {
-                                if finder.initial_click_made {
-                                    let (start_loc, end_loc) = match finder.get_current_match() {
-                                        Some((sl, len)) => (sl, sl+len),
-                                        None => {
-                                            *active_popup = Popup::Error;
-                                            *err_msg = Some("No text selected".into());
-                                            return
-                                        }   
-                                    };
-                                    text_buf.replace_range(start_loc..end_loc, &finder.replace_buf);
-                                    finder.update_matches();
-                                    CodeShare::highlight_text(ctx, finder, switch_to_editor);
-                                }
+                            if ui.button("Replace").clicked() && finder.initial_click_made {
+                                let (start_loc, end_loc) = match finder.get_current_match() {
+                                    Some((sl, len)) => (sl, sl+len),
+                                    None => {
+                                        *active_popup = Popup::Error;
+                                        *err_msg = Some("No text selected".into());
+                                        return
+                                    }   
+                                };
+                                text_buf.replace_range(start_loc..end_loc, &finder.replace_buf);
+                                finder.update_matches();
+                                CodeShare::highlight_text(ctx, finder, switch_to_editor);
+                                
                             }
                             if ui.button("Replace All").clicked() {
                                 for start_loc in (*finder).match_locations.iter() {
@@ -323,13 +322,16 @@ impl epi::App for CodeShare {
                             if finder.initial_click_made {
                                 finder.selected_loc_dec();
                             }
-                            CodeShare::highlight_text(ctx, finder, switch_to_editor);
+                            CodeShare::highlight_text(ctx, finder, switch_to_editor);                            
                         }
                         if next_but.clicked() && finder.number_of_matches() != 0 {
                             if finder.initial_click_made {
                                 finder.selected_loc_inc();
                             }
                             CodeShare::highlight_text(ctx, finder, switch_to_editor);
+                        }
+                        if finder.number_of_matches() == 0 && (next_but.clicked() || prev_but.clicked()) {
+                            CodeShare::move_cursor(ctx, 0, None, switch_to_editor);
                         }
                         if ui.button("Close").clicked() {
                             finder.full_reset();
@@ -531,6 +533,31 @@ impl CodeShare {
                 finder.initial_click_made = false; // Don't change this property with .get_current_match()
             }
         }
+    }
+
+    fn move_cursor(ctx: &egui::CtxRef, start: usize, end: Option<usize>, switch_to_editor: &mut bool) {
+        if let Some(mut editor_state) = egui::TextEdit::load_state(ctx, egui::Id::new("editor")) {
+            let min_curs = egui::epaint::text::cursor::CCursor::new(start);
+            if let Some(end) = end {
+                let max_curs = egui::epaint::text::cursor::CCursor::new(end);
+                editor_state.set_ccursor_range(Some(egui::text_edit::CCursorRange::two(
+                    min_curs, max_curs,
+                )));
+            } else {
+                editor_state.set_ccursor_range(Some(egui::text_edit::CCursorRange::one(min_curs)));
+            }
+            egui::TextEdit::store_state(ctx, egui::Id::new("editor"), editor_state);
+            *switch_to_editor = true;
+        }
+    }
+
+    fn _get_cursor_index(ctx: &egui::CtxRef) -> Option<usize> {
+        if let Some(editor_state) = egui::TextEdit::load_state(ctx, egui::Id::new("editor")) {
+            if let Some(cursor_range) = editor_state.ccursor_range() {
+                return Some(cursor_range.secondary.index)
+            }
+        }
+        None
     }
 }
 
