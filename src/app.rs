@@ -286,8 +286,7 @@ impl epi::App for CodeShare {
                             finder.reset_matches();
                         }
                         ui.checkbox(&mut finder.replace_mode, "Replace");
-                        let info_str = format!("{} maches found", finder.number_of_matches());
-                        ui.label(info_str);
+                        ui.label(format!("{} maches found", finder.number_of_matches()));
                     });
                     if finder.replace_mode {
                         ui.horizontal(|ui| {
@@ -303,18 +302,16 @@ impl epi::App for CodeShare {
                                         }   
                                     };
                                     text_buf.replace_range(start_loc..end_loc, &finder.replace_buf);
+                                    finder.update_matches();
+                                    CodeShare::highlight_text(ctx, finder, switch_to_editor);
                                 }
-
-                                //TODO -> First make it so any matches 
-                                //get highlighted when typing in find 
-                                //query
                             }
                             if ui.button("Replace All").clicked() {
-                                // TODO -> &str.replacen()
                                 for start_loc in (*finder).match_locations.iter() {
                                     let end_loc = start_loc + finder.query_buf.chars().count();
                                     text_buf.replace_range(start_loc..&end_loc, &finder.replace_buf);
                                 }
+                                finder.reset_matches();
                             }
                         });
                     }

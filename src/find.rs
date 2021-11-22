@@ -36,6 +36,33 @@ impl FindTools {
         self.initial_click_made = false;
     }
 
+    pub fn update_matches(&mut self) {
+        //call after using replace on a match4
+        let find_len = self.query_buf.chars().count();
+        let rep_len = self.replace_buf.chars().count();
+        if rep_len > find_len {
+            for i in self.selected_loc..self.match_locations.len() {
+                self.match_locations[i] += rep_len - find_len;
+            }
+        } else if rep_len < find_len {
+            for i in self.selected_loc..self.match_locations.len() {
+                self.match_locations[i] -= find_len - rep_len;
+            }
+        }
+        //selected location shoud stay the same index, unless it should wrap
+        //around to the start
+        match self.selected_loc == self.match_locations.len() - 1 {
+            true => {
+                self.match_locations.remove(self.selected_loc);
+                self.selected_loc = 0
+            },
+            false => {
+                self.match_locations.remove(self.selected_loc);
+            ()
+            }
+        }
+    }
+
     pub fn get_query(&self) -> String {
         self.query_buf.clone()
     }
