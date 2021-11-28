@@ -463,7 +463,6 @@ impl epi::App for CodeShare {
                             let mut lines_str = num_tool.generate(current_line_count);
                             ui.add(
                                 egui::TextEdit::multiline(&mut lines_str)
-                                    //.desired_width(config.get_font_size() * 2.7)
                                     .desired_width(0.0)
                                     .code_editor()
                                     .frame(false)
