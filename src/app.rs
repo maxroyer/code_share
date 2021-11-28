@@ -484,6 +484,14 @@ impl epi::App for CodeShare {
                             );
                             if editor.changed() {
                                 file_status.set_unsaved(true);
+                                // Get input events and add to undo stack
+
+                                //This method only gets individual key presses
+                                // let events = &(*ctx.input()).events;
+                                // for event in events.iter() {
+                                //     println!("{:?}", event);
+                                // }
+
                             }
                             if *switch_to_editor {
                                 editor.request_focus();

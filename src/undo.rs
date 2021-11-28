@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::ops::Range;
 
 use eframe::egui::TextBuffer;
@@ -30,8 +31,8 @@ impl TextCommand for TextDelete {
 }
 
 pub struct UndoStack<T> {
-    undo_stack: Vec<T>,
-    redo_stack: Vec<T>,
+    undo_stack: VecDeque<T>,
+    redo_stack: VecDeque<T>,
 }
 
 impl <T: TextCommand> UndoStack<T> {
