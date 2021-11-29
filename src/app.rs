@@ -139,7 +139,7 @@ impl epi::App for CodeShare {
                     }
                 });
                 egui::menu::menu_button(ui, "Edit", |ui| {
-                    ui.label("to be built");
+                    if ui.button("Undo (Ctrl-Z)").clicked() {}
                 });
                 egui::menu::menu_button(ui, "View", |ui| {
                     ui.checkbox(&mut config.line_nums, "Line Numbers");
