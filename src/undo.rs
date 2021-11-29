@@ -1,40 +1,36 @@
+#![allow(dead_code)]
 use std::collections::VecDeque;
 use std::ops::Range;
-
 use eframe::egui::TextBuffer;
 
-pub trait TextCommand {
-    fn execute(&self, buffer: &mut String) -> usize;
-}
-
-pub struct TextInsert {
-    text: String,
-    ch_index: usize
-}
-
-impl TextCommand for TextInsert {
-    fn execute(&self, buffer: &mut String) -> usize {
-         buffer.insert_text(&self.text, self.ch_index)
+enum TxtCom {
+    Insert {
+        text: String,
+        ch_index: usize,
+    },
+    Delete {
+        ch_range: Range<usize>
     }
 }
 
-pub struct TextDelete {
-    ch_range: Range<usize>
-}
-
-impl TextCommand for TextDelete {
+impl TxtCom {
     fn execute(&self, buffer: &mut String) -> usize {
-        let range = self.ch_range.clone();
-        buffer.delete_char_range(range);
-        0
+        match self {
+            Self::Insert{ text, ch_index } => {
+                buffer.insert_text(text, *ch_index)
+            },
+            Self::Delete {ch_range } => {
+                buffer.delete_char_range(ch_range.clone());
+                0
+            }
+        }
+        
     }
 }
 
-pub struct UndoStack<T> {
-    undo_stack: VecDeque<T>,
-    redo_stack: VecDeque<T>,
+
+pub struct UndoStack {
+    undo_stack: VecDeque<TxtCom>,
+    redo_stack: VecDeque<TxtCom>,
 }
 
-impl <T: TextCommand> UndoStack<T> {
-
-}
